@@ -1,149 +1,493 @@
-
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>R8ツアー 2025</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
+:root {
+  --green: #2D6A4F;
+  --green-light: #52B788;
+  --green-pale: #D8F3DC;
+  --gold: #B7791F;
+  --gold-pale: #FEF3C7;
+  --red-pale: #FEE2E2;
+  --red: #B91C1C;
+  --blue-pale: #DBEAFE;
+  --blue: #1D4ED8;
+  --bg: #F7F6F3;
+  --surface: #FFFFFF;
+  --border: #E5E2DC;
+  --text: #1A1A18;
+  --text-sub: #6B6B67;
+  --text-muted: #9E9E99;
+  --radius: 10px;
+  --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+}
 * { box-sizing: border-box; margin: 0; padding: 0; }
-.app { padding: 1rem 0; font-family: var(--font-sans); }
-.tabs { display: flex; gap: 0; margin-bottom: 1.5rem; border-bottom: 0.5px solid var(--color-border-tertiary); }
-.tab { padding: 8px 16px; font-size: 13px; cursor: pointer; border: none; background: none; color: var(--color-text-secondary); border-bottom: 2px solid transparent; margin-bottom: -1px; }
-.tab.active { color: var(--color-text-primary); border-bottom: 2px solid var(--color-text-primary); font-weight: 500; }
-.tab:hover:not(.active) { color: var(--color-text-primary); }
+body { background: var(--bg); color: var(--text); font-family: 'Noto Sans JP', sans-serif; font-size: 14px; min-height: 100vh; }
+
+/* Layout */
+.header { background: var(--green); color: white; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; }
+.header-title { font-size: 18px; font-weight: 700; letter-spacing: 0.03em; }
+.header-sub { font-size: 12px; opacity: 0.7; font-family: 'DM Mono', monospace; }
+.header-status { font-size: 12px; display: flex; align-items: center; gap: 6px; }
+.status-dot { width: 7px; height: 7px; border-radius: 50%; background: #4ADE80; animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+.nav { background: var(--surface); border-bottom: 1px solid var(--border); display: flex; overflow-x: auto; }
+.nav-btn { padding: 13px 20px; font-size: 13px; font-weight: 500; border: none; background: none; color: var(--text-sub); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; font-family: inherit; transition: color 0.15s; }
+.nav-btn:hover { color: var(--text); }
+.nav-btn.active { color: var(--green); border-bottom-color: var(--green); }
+
+.main { max-width: 900px; margin: 0 auto; padding: 24px 16px; }
 .panel { display: none; }
 .panel.active { display: block; }
-.card { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); padding: 1rem 1.25rem; margin-bottom: 12px; overflow-x: auto; }
-.metric-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(110px,1fr)); gap: 10px; margin-bottom: 1.5rem; }
-.metric { background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 0.75rem 1rem; }
-.metric-label { font-size: 12px; color: var(--color-text-secondary); margin-bottom: 4px; }
-.metric-value { font-size: 22px; font-weight: 500; color: var(--color-text-primary); }
+
+/* Cards */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; box-shadow: var(--shadow); }
+.card-title { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 14px; }
+
+/* Metrics */
+.metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px,1fr)); gap: 12px; margin-bottom: 20px; }
+.metric { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; box-shadow: var(--shadow); }
+.metric-val { font-size: 26px; font-weight: 700; color: var(--text); font-family: 'DM Mono', monospace; }
+.metric-lbl { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+/* Table */
+.tbl-wrap { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
-th { text-align: left; padding: 8px 10px; font-weight: 500; font-size: 12px; color: var(--color-text-secondary); border-bottom: 0.5px solid var(--color-border-tertiary); white-space: nowrap; }
-td { padding: 8px 10px; border-bottom: 0.5px solid var(--color-border-tertiary); color: var(--color-text-primary); white-space: nowrap; }
+th { text-align: left; padding: 9px 12px; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 1px solid var(--border); white-space: nowrap; }
+td { padding: 11px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
 tr:last-child td { border-bottom: none; }
-.sec { font-size: 12px; font-weight: 500; color: var(--color-text-secondary); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
-.badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 500; }
-.b-blue { background:#E6F1FB; color:#185FA5; }
-.b-green { background:#EAF3DE; color:#3B6D11; }
-.rank-gold { color:#BA7517; font-weight:500; }
-.rank-silver { color:#888780; font-weight:500; }
-.rank-bronze { color:#993C1D; font-weight:500; }
-input[type=text], input[type=number], select {
-  height: 34px; padding: 0 10px; font-size: 13px;
-  border: 0.5px solid var(--color-border-secondary);
-  border-radius: var(--border-radius-md);
-  background: var(--color-background-primary);
-  color: var(--color-text-primary);
+tbody tr:hover td { background: #FAFAF8; }
+
+/* Badge */
+.badge { display: inline-flex; align-items: center; padding: 2px 9px; border-radius: 20px; font-size: 11px; font-weight: 500; }
+.badge-green { background: var(--green-pale); color: var(--green); }
+.badge-blue { background: var(--blue-pale); color: var(--blue); }
+.badge-gold { background: var(--gold-pale); color: var(--gold); }
+.badge-red { background: var(--red-pale); color: var(--red); }
+
+/* Form */
+.form-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+.form-field { display: flex; flex-direction: column; gap: 5px; }
+.form-field label { font-size: 11px; font-weight: 700; color: var(--text-sub); text-transform: uppercase; letter-spacing: 0.05em; }
+input[type=text], input[type=number], select, textarea {
+  height: 36px; padding: 0 11px; font-size: 13px; font-family: inherit;
+  border: 1px solid var(--border); border-radius: 7px;
+  background: var(--surface); color: var(--text); outline: none;
+  transition: border-color 0.15s;
 }
-input[type=text]:focus, input[type=number]:focus, select:focus { outline: 2px solid var(--color-border-primary); }
-.btn { padding: 6px 14px; font-size: 13px; border: 0.5px solid var(--color-border-secondary); border-radius: var(--border-radius-md); background: transparent; cursor: pointer; color: var(--color-text-primary); }
-.btn:hover { background: var(--color-background-secondary); }
-.btn-primary { background: var(--color-text-primary); color: var(--color-background-primary); border-color: var(--color-text-primary); }
-.btn-primary:hover { opacity: 0.82; }
-.btn-sm { padding: 4px 10px; font-size: 12px; }
-.btn-danger { border-color: #F09595; color: #A32D2D; }
-.btn-danger:hover { background: #FCEBEB; }
-.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 1rem; }
-.field { display: flex; flex-direction: column; gap: 4px; }
-.field label { font-size: 12px; color: var(--color-text-secondary); }
-.inline-input { width: 68px; text-align: center; height: 26px; padding: 0 4px; font-size: 13px; border: 1px solid var(--color-border-primary); border-radius: 4px; background: var(--color-background-primary); color: var(--color-text-primary); }
-.toast { position: fixed; bottom: 20px; right: 20px; background: var(--color-text-primary); color: var(--color-background-primary); padding: 10px 16px; border-radius: var(--border-radius-md); font-size: 13px; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 999; }
-.toast.show { opacity: 1; }
+input:focus, select:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(45,106,79,0.1); }
+
+/* Buttons */
+.btn { height: 36px; padding: 0 16px; font-size: 13px; font-weight: 500; font-family: inherit; border: 1px solid var(--border); border-radius: 7px; background: var(--surface); color: var(--text); cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+.btn:hover { background: #F0EFE9; }
+.btn-primary { background: var(--green); color: white; border-color: var(--green); }
+.btn-primary:hover { background: #245A42; }
+.btn-sm { height: 28px; padding: 0 10px; font-size: 12px; }
+.btn-danger { color: var(--red); border-color: #FECACA; }
+.btn-danger:hover { background: var(--red-pale); }
+
+/* Score input */
+.score-inp { width: 75px; height: 30px; text-align: center; font-size: 13px; font-family: 'DM Mono', monospace; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); outline: none; padding: 0 6px; }
+.score-inp:focus { border-color: var(--green); background: white; box-shadow: 0 0 0 3px rgba(45,106,79,0.1); }
+
+/* Rank */
+.rank-1 { color: var(--gold); font-weight: 700; font-family: 'DM Mono', monospace; }
+.rank-2 { color: var(--text-sub); font-weight: 700; font-family: 'DM Mono', monospace; }
+.rank-3 { color: #92400E; font-weight: 700; font-family: 'DM Mono', monospace; }
+.rank-other { color: var(--text-muted); font-family: 'DM Mono', monospace; }
+
+/* Toast */
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--text); color: white; padding: 10px 20px; border-radius: 8px; font-size: 13px; opacity: 0; transition: all 0.25s; pointer-events: none; z-index: 9999; white-space: nowrap; }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* Loading */
+.loading { display: flex; align-items: center; justify-content: center; padding: 48px; color: var(--text-muted); font-size: 13px; gap: 10px; }
+.spinner { width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: var(--green); border-radius: 50%; animation: spin 0.7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Saving indicator */
+.saving { display: none; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); }
+.saving.active { display: flex; }
 </style>
+</head>
+<body>
 
-<div class="app">
-<h2 class="sr-only">R8ツアー ゴルフ管理アプリ</h2>
-<div style="display:flex;align-items:baseline;gap:10px;margin-bottom:1.25rem;">
-  <span style="font-size:20px;font-weight:500;">R8ツアー</span>
-  <span style="font-size:13px;color:var(--color-text-secondary);">2025シーズン</span>
-</div>
-
-<div class="tabs">
-  <button class="tab active" onclick="showTab('schedule',this)">スケジュール</button>
-  <button class="tab" onclick="showTab('score',this)">スコア入力</button>
-  <button class="tab" onclick="showTab('ranking',this)">ランキング</button>
-  <button class="tab" onclick="showTab('members',this)">メンバー</button>
-</div>
-
-<!-- スケジュール -->
-<div id="schedule" class="panel active">
-  <div class="metric-grid">
-    <div class="metric"><div class="metric-label">全ラウンド</div><div class="metric-value" id="m-total">10</div></div>
-    <div class="metric"><div class="metric-label">完了</div><div class="metric-value" id="m-done">2</div></div>
-    <div class="metric"><div class="metric-label">予定</div><div class="metric-value" id="m-upcoming">8</div></div>
-    <div class="metric"><div class="metric-label">メンバー数</div><div class="metric-value" id="m-members">13</div></div>
+<div class="header">
+  <div>
+    <div class="header-title">⛳ R8ツアー</div>
+    <div class="header-sub">2025 SEASON</div>
   </div>
-  <div class="card">
-    <div class="sec">ラウンド一覧</div>
-    <table><thead><tr><th>#</th><th>日付</th><th>コース</th><th>人数</th><th>プレー代</th><th>状態</th><th></th></tr></thead>
-    <tbody id="sched-body"></tbody></table>
-  </div>
-  <div class="card">
-    <div class="sec">ラウンドを追加</div>
-    <div class="row">
-      <div class="field"><label>日付</label><input type="text" id="new-date" placeholder="例: 8月10日（日）" style="width:150px;"></div>
-      <div class="field"><label>コース名</label><input type="text" id="new-course" placeholder="コース名" style="width:180px;"></div>
-      <div class="field"><label>プレー代</label><input type="text" id="new-fee" placeholder="例: 12,000円（昼食付）" style="width:170px;"></div>
-      <div class="field"><label>人数</label><input type="number" id="new-players" placeholder="8" style="width:70px;" min="1" max="30"></div>
-      <button class="btn btn-primary" onclick="addRound()">追加</button>
-    </div>
+  <div class="header-status">
+    <div class="status-dot"></div>
+    <span id="sync-status">同期中...</span>
   </div>
 </div>
 
-<!-- スコア入力 -->
-<div id="score" class="panel">
-  <div class="row">
-    <div class="field"><label>ラウンドを選択</label>
-      <select id="score-round" onchange="renderScoreInput()" style="width:240px;"></select>
-    </div>
-  </div>
-  <div class="card">
-    <div class="sec">スコアを入力して保存ボタンを押してください</div>
-    <table><thead><tr><th>名前</th><th style="text-align:center;">スコア</th><th style="text-align:center;">参加</th></tr></thead>
-    <tbody id="score-body"></tbody></table>
-    <div style="margin-top:12px;display:flex;gap:8px;">
-      <button class="btn btn-primary" onclick="saveScores()">保存</button>
-      <button class="btn" onclick="markRoundDone()">このラウンドを完了にする</button>
-    </div>
-  </div>
-</div>
+<nav class="nav">
+  <button class="nav-btn active" onclick="showTab('schedule',this)">スケジュール</button>
+  <button class="nav-btn" onclick="showTab('score',this)">スコア入力</button>
+  <button class="nav-btn" onclick="showTab('ranking',this)">ランキング</button>
+  <button class="nav-btn" onclick="showTab('members',this)">メンバー</button>
+</nav>
 
-<!-- ランキング -->
-<div id="ranking" class="panel">
-  <div class="row">
-    <div class="field"><label>並び替え</label>
-      <select id="rank-sort" onchange="renderRanking()" style="width:160px;">
-        <option value="avg">平均スコア順</option>
-        <option value="best">ベストスコア順</option>
-        <option value="rounds">ラウンド数順</option>
-      </select>
-    </div>
-  </div>
-  <div class="card">
-    <table><thead><tr><th>順位</th><th>名前</th><th>参加</th><th>平均</th><th>ベスト</th><th>ワースト</th></tr></thead>
-    <tbody id="rank-body"></tbody></table>
-  </div>
-</div>
+<div class="main">
 
-<!-- メンバー -->
-<div id="members" class="panel">
-  <div class="card">
-    <div class="sec">メンバー一覧</div>
-    <table><thead><tr><th>名前</th><th>参加回数</th><th>平均スコア</th><th>ベスト</th><th></th></tr></thead>
-    <tbody id="member-body"></tbody></table>
-  </div>
-  <div class="card">
-    <div class="sec">メンバーを追加</div>
-    <div class="row">
-      <div class="field"><label>氏名</label><input type="text" id="new-member" placeholder="例: 山田 太郎" style="width:160px;"></div>
-      <button class="btn btn-primary" onclick="addMember()">追加</button>
+  <!-- スケジュール -->
+  <div id="schedule" class="panel active">
+    <div class="metrics">
+      <div class="metric"><div class="metric-val" id="m-total">—</div><div class="metric-lbl">全ラウンド</div></div>
+      <div class="metric"><div class="metric-val" id="m-done">—</div><div class="metric-lbl">完了</div></div>
+      <div class="metric"><div class="metric-val" id="m-upcoming">—</div><div class="metric-lbl">予定</div></div>
+      <div class="metric"><div class="metric-val" id="m-mcount">—</div><div class="metric-lbl">メンバー数</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">ラウンド一覧</div>
+      <div class="tbl-wrap">
+        <table><thead><tr><th>#</th><th>日付</th><th>コース</th><th>人数</th><th>プレー代</th><th>状態</th><th></th></tr></thead>
+        <tbody id="sched-body"><tr><td colspan="7"><div class="loading"><div class="spinner"></div>読み込み中...</div></td></tr></tbody></table>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">ラウンドを追加</div>
+      <div class="form-row">
+        <div class="form-field"><label>日付</label><input type="text" id="new-date" placeholder="例: 8月10日（日）" style="width:150px;"></div>
+        <div class="form-field"><label>コース名</label><input type="text" id="new-course" placeholder="コース名" style="width:180px;"></div>
+        <div class="form-field"><label>プレー代</label><input type="text" id="new-fee" placeholder="例: 12,000円（昼食付）" style="width:180px;"></div>
+        <div class="form-field"><label>人数</label><input type="number" id="new-players" placeholder="8" style="width:70px;" min="1" max="30"></div>
+        <div class="form-field"><label>&nbsp;</label><button class="btn btn-primary" onclick="addRound()">追加</button></div>
+      </div>
     </div>
   </div>
+
+  <!-- スコア入力 -->
+  <div id="score" class="panel">
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+        <div class="form-field" style="margin:0;">
+          <label>ラウンドを選択</label>
+          <select id="score-round" onchange="renderScoreInput()" style="width:260px;"></select>
+        </div>
+        <div class="saving" id="saving-ind"><div class="spinner"></div>保存中...</div>
+      </div>
+      <div class="card-title">スコアを入力して「保存」を押してください</div>
+      <div class="tbl-wrap">
+        <table><thead><tr><th>名前</th><th style="text-align:center;">スコア</th><th style="text-align:center;">参加</th></tr></thead>
+        <tbody id="score-body"></tbody></table>
+      </div>
+      <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="saveScores()">保存</button>
+        <button class="btn" onclick="markRoundDone()">このラウンドを完了にする</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ランキング -->
+  <div id="ranking" class="panel">
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+        <div class="card-title" style="margin:0;">メンバーランキング</div>
+        <div class="form-field" style="margin:0;">
+          <select id="rank-sort" onchange="renderRanking()" style="width:160px;">
+            <option value="avg">平均スコア順</option>
+            <option value="best">ベストスコア順</option>
+            <option value="rounds">ラウンド数順</option>
+          </select>
+        </div>
+      </div>
+      <div class="tbl-wrap">
+        <table><thead><tr><th>順位</th><th>名前</th><th>参加</th><th>平均スコア</th><th>ベスト</th><th>ワースト</th></tr></thead>
+        <tbody id="rank-body"><tr><td colspan="6"><div class="loading"><div class="spinner"></div>読み込み中...</div></td></tr></tbody></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- メンバー -->
+  <div id="members" class="panel">
+    <div class="card">
+      <div class="card-title">メンバー一覧</div>
+      <div class="tbl-wrap">
+        <table><thead><tr><th>名前</th><th>参加回数</th><th>平均スコア</th><th>ベストスコア</th><th></th></tr></thead>
+        <tbody id="member-body"><tr><td colspan="5"><div class="loading"><div class="spinner"></div>読み込み中...</div></td></tr></tbody></table>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">メンバーを追加</div>
+      <div class="form-row">
+        <div class="form-field"><label>氏名</label><input type="text" id="new-member" placeholder="例: 山田 太郎" style="width:180px;"></div>
+        <div class="form-field"><label>&nbsp;</label><button class="btn btn-primary" onclick="addMember()">追加</button></div>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <div class="toast" id="toast"></div>
-</div>
 
-<script>
-let state = {
-  members: ['袴田 健一','中川 晃','笹川 和彦','三浦 卓也','桂木 能久','中村 英世','庄司 聡','加藤 勇樹','髙橋 渓太','二ツ森 友輝','小笠原 康晃','大湯 健介','樋口 颯士'],
-  rounds: [
+<!-- Firebase SDKs -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, doc, getDocs, setDoc, deleteDoc, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAifsXHSQlpAPyCLqBLp5Gc0N-QcR2sk94",
+  authDomain: "golf-table.firebaseapp.com",
+  projectId: "golf-table",
+  storageBucket: "golf-table.firebasestorage.app",
+  messagingSenderId: "274175996245",
+  appId: "1:274175996245:web:5ec942c1c78a5194437fdc",
+  measurementId: "G-TRNP0CEPR0"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// State
+let members = [];
+let rounds = [];
+let scores = {}; // { roundId: { memberId: score } }
+
+// ---- Firestore listeners ----
+onSnapshot(collection(db, 'members'), snap => {
+  members = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  members.sort((a,b) => (a.order||0)-(b.order||0));
+  renderAll();
+  document.getElementById('m-mcount').textContent = members.length;
+});
+
+onSnapshot(collection(db, 'rounds'), snap => {
+  rounds = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  rounds.sort((a,b) => (a.order||0)-(b.order||0));
+  renderAll();
+  const done = rounds.filter(r=>r.done).length;
+  document.getElementById('m-total').textContent = rounds.length;
+  document.getElementById('m-done').textContent = done;
+  document.getElementById('m-upcoming').textContent = rounds.length - done;
+});
+
+onSnapshot(collection(db, 'scores'), snap => {
+  scores = {};
+  snap.docs.forEach(d => { scores[d.id] = d.data(); });
+  renderAll();
+  document.getElementById('sync-status').textContent = '同期済み';
+});
+
+// ---- Helpers ----
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function getStats(memberId) {
+  const s = Object.values(scores)
+    .map(row => row[memberId])
+    .filter(v => v !== null && v !== undefined && !isNaN(v));
+  if (!s.length) return { rounds: 0, avg: null, best: null, worst: null };
+  return {
+    rounds: s.length,
+    avg: Math.round(s.reduce((a,b)=>a+b,0)/s.length*10)/10,
+    best: Math.min(...s),
+    worst: Math.max(...s)
+  };
+}
+
+function renderAll() {
+  const activeTab = document.querySelector('.panel.active')?.id;
+  if (activeTab === 'schedule' || !activeTab) renderSchedule();
+  if (activeTab === 'score') { populateRoundSelect(); }
+  if (activeTab === 'ranking') renderRanking();
+  if (activeTab === 'members') renderMembers();
+}
+
+// ---- Schedule ----
+window.renderSchedule = function() {
+  document.getElementById('sched-body').innerHTML = rounds.length === 0
+    ? `<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:24px;">ラウンドがまだありません</td></tr>`
+    : rounds.map((r,i) => {
+        const badge = r.done
+          ? `<span class="badge badge-green">完了</span>`
+          : `<span class="badge badge-blue">予定</span>`;
+        return `<tr>
+          <td style="color:var(--text-muted);font-family:'DM Mono',monospace;font-size:12px;">第${i+1}回</td>
+          <td style="font-weight:500;">${r.date||''}</td>
+          <td>${r.course||''}</td>
+          <td style="color:var(--text-sub);">${r.players ? r.players+'名' : '—'}</td>
+          <td style="font-size:12px;color:var(--text-muted);max-width:180px;white-space:normal;">${r.fee||'—'}</td>
+          <td>${badge}</td>
+          <td><button class="btn btn-sm btn-danger" onclick="deleteRound('${r.id}',${i})">削除</button></td>
+        </tr>`;
+      }).join('');
+}
+
+window.addRound = async function() {
+  const date = document.getElementById('new-date').value.trim();
+  const course = document.getElementById('new-course').value.trim();
+  const fee = document.getElementById('new-fee').value.trim();
+  const players = parseInt(document.getElementById('new-players').value) || null;
+  if (!date || !course) { toast('日付とコース名は必須です'); return; }
+  const id = 'round_' + Date.now();
+  await setDoc(doc(db, 'rounds', id), { date, course, fee: fee||'未定', players, done: false, order: rounds.length });
+  document.getElementById('new-date').value = '';
+  document.getElementById('new-course').value = '';
+  document.getElementById('new-fee').value = '';
+  document.getElementById('new-players').value = '';
+  toast('ラウンドを追加しました');
+}
+
+window.deleteRound = async function(id, i) {
+  if (!confirm(`第${i+1}回を削除しますか？`)) return;
+  await deleteDoc(doc(db, 'rounds', id));
+  toast('削除しました');
+}
+
+// ---- Score ----
+window.populateRoundSelect = function() {
+  const sel = document.getElementById('score-round');
+  const prev = sel.value;
+  sel.innerHTML = rounds.map((r,i) => `<option value="${r.id}">第${i+1}回 — ${r.date} ${r.course}</option>`).join('');
+  if (prev && rounds.find(r=>r.id===prev)) sel.value = prev;
+  renderScoreInput();
+}
+
+window.renderScoreInput = function() {
+  const ri = document.getElementById('score-round').value;
+  const row = scores[ri] || {};
+  document.getElementById('score-body').innerHTML = members.map(m => {
+    const val = row[m.id] !== undefined && row[m.id] !== null ? row[m.id] : '';
+    return `<tr>
+      <td style="font-weight:500;">${m.name}</td>
+      <td style="text-align:center;">
+        <input type="number" class="score-inp" data-mid="${m.id}" value="${val}" placeholder="—" min="50" max="999">
+      </td>
+      <td style="text-align:center;">
+        <input type="checkbox" data-mid="${m.id}" ${val!=='' ? 'checked' : ''} onchange="toggleParticipant(this,'${ri}')">
+      </td>
+    </tr>`;
+  }).join('');
+
+  document.querySelectorAll('#score-body input[type=number]').forEach(inp => {
+    inp.addEventListener('input', () => {
+      const cb = document.querySelector(`#score-body input[type=checkbox][data-mid="${inp.dataset.mid}"]`);
+      if (cb) cb.checked = inp.value !== '';
+    });
+  });
+}
+
+window.toggleParticipant = function(cb, ri) {
+  if (!cb.checked) {
+    const inp = document.querySelector(`#score-body input[type=number][data-mid="${cb.dataset.mid}"]`);
+    if (inp) inp.value = '';
+  }
+}
+
+window.saveScores = async function() {
+  const ri = document.getElementById('score-round').value;
+  if (!ri) return;
+  const ind = document.getElementById('saving-ind');
+  ind.classList.add('active');
+  const data = {};
+  document.querySelectorAll('#score-body input[type=number]').forEach(inp => {
+    const v = inp.value !== '' ? parseInt(inp.value) : null;
+    data[inp.dataset.mid] = v;
+  });
+  await setDoc(doc(db, 'scores', ri), data);
+  ind.classList.remove('active');
+  toast('スコアを保存しました ✓');
+}
+
+window.markRoundDone = async function() {
+  const ri = document.getElementById('score-round').value;
+  if (!ri) return;
+  const r = rounds.find(r=>r.id===ri);
+  if (!r) return;
+  await updateDoc(doc(db, 'rounds', ri), { done: true });
+  toast('ラウンドを完了にしました');
+}
+
+// ---- Ranking ----
+window.renderRanking = function() {
+  const sort = document.getElementById('rank-sort').value;
+  const stats = members.map(m => ({ name: m.name, ...getStats(m.id) })).filter(m=>m.rounds>0);
+  stats.sort((a,b) => sort==='avg' ? a.avg-b.avg : sort==='best' ? a.best-b.best : b.rounds-a.rounds);
+  if (!stats.length) {
+    document.getElementById('rank-body').innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:24px;">スコアがまだありません</td></tr>`;
+    return;
+  }
+  document.getElementById('rank-body').innerHTML = stats.map((m,i) => {
+    const rankCls = ['rank-1','rank-2','rank-3'][i] || 'rank-other';
+    const rankStr = i < 3 ? ['🥇','🥈','🥉'][i] : `${i+1}位`;
+    return `<tr>
+      <td class="${rankCls}">${rankStr}</td>
+      <td style="font-weight:500;">${m.name}</td>
+      <td style="color:var(--text-sub);">${m.rounds}回</td>
+      <td style="font-family:'DM Mono',monospace;">${m.avg}</td>
+      <td style="color:var(--green);font-weight:700;font-family:'DM Mono',monospace;">${m.best}</td>
+      <td style="color:var(--red);font-family:'DM Mono',monospace;">${m.worst}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ---- Members ----
+window.renderMembers = function() {
+  document.getElementById('member-body').innerHTML = members.map(m => {
+    const s = getStats(m.id);
+    return `<tr>
+      <td style="font-weight:500;">${m.name}</td>
+      <td style="color:var(--text-sub);">${s.rounds}回</td>
+      <td style="font-family:'DM Mono',monospace;">${s.avg !== null ? s.avg : '—'}</td>
+      <td style="color:${s.best?'var(--green)':'inherit'};font-weight:${s.best?700:400};font-family:'DM Mono',monospace;">${s.best !== null ? s.best : '—'}</td>
+      <td><button class="btn btn-sm btn-danger" onclick="deleteMember('${m.id}')">削除</button></td>
+    </tr>`;
+  }).join('');
+}
+
+window.addMember = async function() {
+  const name = document.getElementById('new-member').value.trim();
+  if (!name) return;
+  const id = 'member_' + Date.now();
+  await setDoc(doc(db, 'members', id), { name, order: members.length });
+  document.getElementById('new-member').value = '';
+  toast(`${name} を追加しました`);
+}
+
+window.deleteMember = async function(id) {
+  const m = members.find(m=>m.id===id);
+  if (!m) return;
+  if (!confirm(`${m.name} を削除しますか？`)) return;
+  await deleteDoc(doc(db, 'members', id));
+  toast('削除しました');
+}
+
+// ---- Tab navigation ----
+window.showTab = function(id, el) {
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  el.classList.add('active');
+  if (id==='score') populateRoundSelect();
+  if (id==='ranking') renderRanking();
+  if (id==='members') renderMembers();
+  if (id==='schedule') renderSchedule();
+}
+
+// ---- Initial data seed (runs only if DB is empty) ----
+async function seedIfEmpty() {
+  const snap = await getDocs(collection(db, 'members'));
+  if (!snap.empty) return;
+
+  const initialMembers = ['袴田 健一','中川 晃','笹川 和彦','三浦 卓也','桂木 能久','中村 英世','庄司 聡','加藤 勇樹','髙橋 渓太','二ツ森 友輝','小笠原 康晃','大湯 健介','樋口 颯士'];
+  for (let i=0; i<initialMembers.length; i++) {
+    const id = 'member_' + (1000+i);
+    await setDoc(doc(db, 'members', id), { name: initialMembers[i], order: i });
+  }
+
+  const initialRounds = [
     {date:'3月28日（土）', course:'夏泊ゴルフリンクス', players:8, fee:'13,000円（昼食付）', done:true},
     {date:'4月18日（土）', course:'津軽高原ゴルフ場', players:8, fee:'12,100円（昼食付）', done:true},
     {date:'5月1日（金）', course:'津軽カントリークラブ', players:7, fee:'13,000円（昼食付）', done:false},
@@ -154,188 +498,25 @@ let state = {
     {date:'7月3日（金）', course:'びわの平ゴルフ倶楽部', players:10, fee:'11,000円（昼食付）', done:false},
     {date:'7月11日（土）', course:'津軽高原ゴルフ場', players:null, fee:'14,900円 / 友の会12,400円（昼食別）', done:false},
     {date:'7月19日（日）', course:'青森ロイヤルゴルフクラブ', players:null, fee:'13,050円（昼食付）', done:false},
-  ],
-  scores: [
-    [null,100,null,null,97,null,90,108,133,96,131,109,null],
-    [null,109,112,null,null,null,103,113,110,100,null,113,109],
-    Array(13).fill(null),Array(13).fill(null),Array(13).fill(null),
-    Array(13).fill(null),Array(13).fill(null),Array(13).fill(null),
-    Array(13).fill(null),Array(13).fill(null),
-  ]
-};
-
-function showTab(id, el) {
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-  el.classList.add('active');
-  if (id==='score') populateRoundSelect();
-  if (id==='ranking') renderRanking();
-  if (id==='members') renderMembers();
-}
-
-function toast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2200);
-}
-
-function getStats(mi) {
-  const s = state.scores.map(row => row[mi]).filter(v => v !== null && v !== undefined);
-  if (!s.length) return {rounds:0, avg:null, best:null, worst:null};
-  return {
-    rounds: s.length,
-    avg: Math.round(s.reduce((a,b)=>a+b,0)/s.length*10)/10,
-    best: Math.min(...s),
-    worst: Math.max(...s)
-  };
-}
-
-function renderSchedule() {
-  const done = state.rounds.filter(r=>r.done).length;
-  document.getElementById('m-total').textContent = state.rounds.length;
-  document.getElementById('m-done').textContent = done;
-  document.getElementById('m-upcoming').textContent = state.rounds.length - done;
-  document.getElementById('m-members').textContent = state.members.length;
-  document.getElementById('sched-body').innerHTML = state.rounds.map((r,i) => {
-    const badge = r.done ? `<span class="badge b-green">完了</span>` : `<span class="badge b-blue">予定</span>`;
-    return `<tr>
-      <td style="color:var(--color-text-secondary);font-size:12px;">第${i+1}回</td>
-      <td>${r.date}</td><td style="font-weight:500;">${r.course}</td>
-      <td>${r.players ? r.players+'名' : '—'}</td>
-      <td style="font-size:12px;color:var(--color-text-secondary);max-width:160px;white-space:normal;">${r.fee}</td>
-      <td>${badge}</td>
-      <td><button class="btn btn-sm btn-danger" onclick="deleteRound(${i})">削除</button></td>
-    </tr>`;
-  }).join('');
-}
-
-function addRound() {
-  const date = document.getElementById('new-date').value.trim();
-  const course = document.getElementById('new-course').value.trim();
-  const fee = document.getElementById('new-fee').value.trim();
-  const players = parseInt(document.getElementById('new-players').value) || null;
-  if (!date || !course) { toast('日付とコース名は必須です'); return; }
-  state.rounds.push({date, course, players, fee: fee||'未定', done:false});
-  state.scores.push(Array(state.members.length).fill(null));
-  document.getElementById('new-date').value='';
-  document.getElementById('new-course').value='';
-  document.getElementById('new-fee').value='';
-  document.getElementById('new-players').value='';
-  renderSchedule();
-  toast('ラウンドを追加しました');
-}
-
-function deleteRound(i) {
-  if (!confirm(`第${i+1}回（${state.rounds[i].course}）を削除しますか？`)) return;
-  state.rounds.splice(i,1);
-  state.scores.splice(i,1);
-  renderSchedule();
-  toast('削除しました');
-}
-
-function populateRoundSelect() {
-  const sel = document.getElementById('score-round');
-  sel.innerHTML = state.rounds.map((r,i)=>`<option value="${i}">第${i+1}回 — ${r.date} ${r.course}</option>`).join('');
-  renderScoreInput();
-}
-
-function renderScoreInput() {
-  const ri = parseInt(document.getElementById('score-round').value);
-  const row = state.scores[ri] || [];
-  document.getElementById('score-body').innerHTML = state.members.map((name, mi) => {
-    const val = row[mi] !== null && row[mi] !== undefined ? row[mi] : '';
-    return `<tr>
-      <td style="font-weight:500;">${name}</td>
-      <td style="text-align:center;">
-        <input type="number" class="inline-input" data-mi="${mi}" value="${val}" placeholder="—" min="50" max="999" maxlength="3" style="width:72px;">
-      </td>
-      <td style="text-align:center;">
-        <input type="checkbox" data-mi="${mi}" ${val!=='' ? 'checked' : ''} onchange="toggleParticipant(this,${ri})">
-      </td>
-    </tr>`;
-  }).join('');
-
-  document.querySelectorAll('#score-body input[type=number]').forEach(inp => {
-    inp.addEventListener('input', () => {
-      const mi = parseInt(inp.dataset.mi);
-      const v = inp.value !== '' ? parseInt(inp.value) : null;
-      if (!state.scores[ri]) state.scores[ri] = Array(state.members.length).fill(null);
-      state.scores[ri][mi] = v;
-      const cb = document.querySelector(`#score-body input[type=checkbox][data-mi="${mi}"]`);
-      if (cb) cb.checked = v !== null;
-    });
-  });
-}
-
-function toggleParticipant(cb, ri) {
-  const mi = parseInt(cb.dataset.mi);
-  if (!cb.checked) {
-    state.scores[ri][mi] = null;
-    const inp = document.querySelector(`#score-body input[type=number][data-mi="${mi}"]`);
-    if (inp) inp.value = '';
+  ];
+  for (let i=0; i<initialRounds.length; i++) {
+    const id = 'round_' + (1000+i);
+    await setDoc(doc(db, 'rounds', id), { ...initialRounds[i], order: i });
   }
+
+  // Seed scores for rounds 1 & 2
+  const memberIds = initialMembers.map((_,i) => 'member_' + (1000+i));
+  const sc1 = [null,100,null,null,97,null,90,108,133,96,131,109,null];
+  const sc2 = [null,109,112,null,null,null,103,113,110,100,null,113,109];
+  const s1 = {}; memberIds.forEach((id,i) => { if(sc1[i]!==null) s1[id]=sc1[i]; });
+  const s2 = {}; memberIds.forEach((id,i) => { if(sc2[i]!==null) s2[id]=sc2[i]; });
+  await setDoc(doc(db, 'scores', 'round_1000'), s1);
+  await setDoc(doc(db, 'scores', 'round_1001'), s2);
+
+  toast('初期データを登録しました');
 }
 
-function saveScores() {
-  const ri = parseInt(document.getElementById('score-round').value);
-  document.querySelectorAll('#score-body input[type=number]').forEach(inp => {
-    const mi = parseInt(inp.dataset.mi);
-    state.scores[ri][mi] = inp.value !== '' ? parseInt(inp.value) : null;
-  });
-  toast('スコアを保存しました');
-}
-
-function markRoundDone() {
-  const ri = parseInt(document.getElementById('score-round').value);
-  state.rounds[ri].done = true;
-  renderSchedule();
-  toast(`第${ri+1}回を完了にしました`);
-}
-
-function renderRanking() {
-  const sort = document.getElementById('rank-sort').value;
-  const stats = state.members.map((name,mi) => ({name, ...getStats(mi)})).filter(m=>m.rounds>0);
-  stats.sort((a,b) => sort==='avg' ? a.avg-b.avg : sort==='best' ? a.best-b.best : b.rounds-a.rounds);
-  document.getElementById('rank-body').innerHTML = stats.map((m,i) => {
-    const rank = i===0?`<span class="rank-gold">1位</span>`:i===1?`<span class="rank-silver">2位</span>`:i===2?`<span class="rank-bronze">3位</span>`:`${i+1}位`;
-    return `<tr><td>${rank}</td><td style="font-weight:500;">${m.name}</td><td>${m.rounds}回</td><td>${m.avg}</td><td style="color:#3B6D11;font-weight:500;">${m.best}</td><td style="color:#A32D2D;">${m.worst}</td></tr>`;
-  }).join('');
-}
-
-function renderMembers() {
-  document.getElementById('member-body').innerHTML = state.members.map((name,mi) => {
-    const s = getStats(mi);
-    return `<tr>
-      <td style="font-weight:500;">${name}</td>
-      <td>${s.rounds}回</td>
-      <td>${s.avg !== null ? s.avg : '—'}</td>
-      <td style="color:${s.best?'#3B6D11':'inherit'};font-weight:${s.best?'500':'400'};">${s.best !== null ? s.best : '—'}</td>
-      <td><button class="btn btn-sm btn-danger" onclick="deleteMember(${mi})">削除</button></td>
-    </tr>`;
-  }).join('');
-}
-
-function addMember() {
-  const name = document.getElementById('new-member').value.trim();
-  if (!name) return;
-  state.members.push(name);
-  state.scores.forEach(row => row.push(null));
-  document.getElementById('new-member').value = '';
-  renderMembers();
-  renderSchedule();
-  toast(`${name} を追加しました`);
-}
-
-function deleteMember(mi) {
-  if (!confirm(`${state.members[mi]} を削除しますか？`)) return;
-  state.members.splice(mi, 1);
-  state.scores.forEach(row => row.splice(mi, 1));
-  renderMembers();
-  renderSchedule();
-  toast('メンバーを削除しました');
-}
-
-renderSchedule();
+seedIfEmpty();
 </script>
+</body>
+</html>
