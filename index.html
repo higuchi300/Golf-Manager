@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>R8ツアー 2025</title>
+<title>弘前大学Golf</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -41,7 +41,7 @@ body { background: var(--bg); color: var(--text); font-family: 'Noto Sans JP', s
 .nav-btn:hover { color: var(--text); }
 .nav-btn.active { color: var(--green); border-bottom-color: var(--green); }
 
-.main { max-width: 900px; margin: 0 auto; padding: 24px 16px; }
+.main { max-width: 1200px; margin: 0 auto; padding: 24px 16px; }
 .panel { display: none; }
 .panel.active { display: block; }
 
@@ -161,7 +161,6 @@ input:focus, select:focus { border-color: var(--green); box-shadow: 0 0 0 3px rg
         <div class="form-field"><label>日付</label><input type="date" id="new-date" style="width:170px;"></div>
         <div class="form-field"><label>コース名</label><input type="text" id="new-course" placeholder="コース名" style="width:180px;"></div>
         <div class="form-field"><label>プレー代</label><input type="text" id="new-fee" placeholder="例: 12,000円（昼食付）" style="width:180px;"></div>
-        <div class="form-field"><label>集合</label><input type="text" id="new-gather" placeholder="例: 7:20 クラブハウス前" style="width:180px;"></div>
         <div class="form-field"><label>スタート</label><input type="text" id="new-start" placeholder="例: 8:00 OUT" style="width:130px;"></div>
         <div class="form-field"><label>人数</label><input type="number" id="new-players" placeholder="8" style="width:70px;" min="1" max="30"></div>
         <div class="form-field" style="min-width:240px;"><label>メモ</label><input type="text" id="new-memo" placeholder="持ち物、注意事項など" style="width:240px;"></div>
@@ -339,7 +338,7 @@ window.renderSchedule = function() {
         const badge = r.done
           ? `<span class="badge badge-green">完了</span>`
           : `<span class="badge badge-blue">予定</span>`;
-        const info = [r.gatherTime ? `集合: ${r.gatherTime}` : '', r.startTime ? `開始: ${r.startTime}` : '', r.memo ? `メモ: ${r.memo}` : '']
+        const info = [r.startTime ? `開始: ${r.startTime}` : '', r.memo ? `メモ: ${r.memo}` : '']
           .filter(Boolean)
           .join('<br>');
         return `<tr>
@@ -363,7 +362,6 @@ window.addRound = async function() {
   const date = document.getElementById('new-date').value.trim();
   const course = document.getElementById('new-course').value.trim();
   const fee = document.getElementById('new-fee').value.trim();
-  const gatherTime = document.getElementById('new-gather').value.trim();
   const startTime = document.getElementById('new-start').value.trim();
   const memo = document.getElementById('new-memo').value.trim();
   const rawPlayers = document.getElementById('new-players').value;
@@ -371,11 +369,10 @@ window.addRound = async function() {
   if (!date || !course) { toast('日付とコース名は必須です'); return; }
   if (players !== null && (isNaN(players) || players < 1 || players > 30)) { toast('人数は1〜30で入力してください'); return; }
   const id = 'round_' + Date.now();
-  await setDoc(doc(db, 'rounds', id), { date, course, fee: fee||'未定', gatherTime, startTime, memo, players, done: false, order: rounds.length });
+  await setDoc(doc(db, 'rounds', id), { date, course, fee: fee||'未定', startTime, memo, players, done: false, order: rounds.length });
   document.getElementById('new-date').value = '';
   document.getElementById('new-course').value = '';
   document.getElementById('new-fee').value = '';
-  document.getElementById('new-gather').value = '';
   document.getElementById('new-start').value = '';
   document.getElementById('new-memo').value = '';
   document.getElementById('new-players').value = '';
@@ -391,8 +388,6 @@ window.editRound = async function(id) {
   if (course === null || !course.trim()) return;
   const fee = prompt('プレー代', r.fee || '未定');
   if (fee === null) return;
-  const gatherTime = prompt('集合情報', r.gatherTime || '');
-  if (gatherTime === null) return;
   const startTime = prompt('スタート情報', r.startTime || '');
   if (startTime === null) return;
   const memo = prompt('メモ', r.memo || '');
@@ -401,7 +396,6 @@ window.editRound = async function(id) {
     date: date.trim(),
     course: course.trim(),
     fee: fee.trim() || '未定',
-    gatherTime: gatherTime.trim(),
     startTime: startTime.trim(),
     memo: memo.trim()
   });
@@ -415,7 +409,6 @@ window.copyRoundMessage = async function(id, i) {
     `【第${i+1}回 R8ツアー案内】`,
     `日付: ${fmtDate(r.date) || '未定'}`,
     `コース: ${r.course || '未定'}`,
-    `集合: ${r.gatherTime || '未定'}`,
     `開始: ${r.startTime || '未定'}`,
     `料金: ${r.fee || '未定'}`,
     `備考: ${r.memo || 'なし'}`
