@@ -74,7 +74,7 @@ tbody tr:hover td { background: #FAFAF8; }
 .form-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
 .form-field { display: flex; flex-direction: column; gap: 5px; }
 .form-field label { font-size: 11px; font-weight: 700; color: var(--text-sub); text-transform: uppercase; letter-spacing: 0.05em; }
-input[type=text], input[type=number], select, textarea {
+input[type=text], input[type=number], input[type=date], select, textarea {
   height: 36px; padding: 0 11px; font-size: 13px; font-family: inherit;
   border: 1px solid var(--border); border-radius: 7px;
   background: var(--surface); color: var(--text); outline: none;
@@ -90,6 +90,9 @@ input:focus, select:focus { border-color: var(--green); box-shadow: 0 0 0 3px rg
 .btn-sm { height: 28px; padding: 0 10px; font-size: 12px; }
 .btn-danger { color: var(--red); border-color: #FECACA; }
 .btn-danger:hover { background: var(--red-pale); }
+.btn-copy { color: var(--blue); border-color: #BFDBFE; }
+.btn-copy:hover { background: var(--blue-pale); }
+.muted { color: var(--text-muted); font-size: 12px; }
 
 /* Score input */
 .score-inp { width: 75px; height: 30px; text-align: center; font-size: 13px; font-family: 'DM Mono', monospace; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); outline: none; padding: 0 6px; }
@@ -148,17 +151,20 @@ input:focus, select:focus { border-color: var(--green); box-shadow: 0 0 0 3px rg
     <div class="card">
       <div class="card-title">ラウンド一覧</div>
       <div class="tbl-wrap">
-        <table><thead><tr><th>#</th><th>日付</th><th>コース</th><th>人数</th><th>プレー代</th><th>状態</th><th></th></tr></thead>
-        <tbody id="sched-body"><tr><td colspan="7"><div class="loading"><div class="spinner"></div>読み込み中...</div></td></tr></tbody></table>
+        <table><thead><tr><th>#</th><th>日付</th><th>コース</th><th>人数</th><th>プレー代</th><th>連絡情報</th><th>状態</th><th></th></tr></thead>
+        <tbody id="sched-body"><tr><td colspan="8"><div class="loading"><div class="spinner"></div>読み込み中...</div></td></tr></tbody></table>
       </div>
     </div>
     <div class="card">
       <div class="card-title">ラウンドを追加</div>
       <div class="form-row">
-        <div class="form-field"><label>日付</label><input type="text" id="new-date" placeholder="例: 8月10日（日）" style="width:150px;"></div>
+        <div class="form-field"><label>日付</label><input type="date" id="new-date" style="width:170px;"></div>
         <div class="form-field"><label>コース名</label><input type="text" id="new-course" placeholder="コース名" style="width:180px;"></div>
         <div class="form-field"><label>プレー代</label><input type="text" id="new-fee" placeholder="例: 12,000円（昼食付）" style="width:180px;"></div>
+        <div class="form-field"><label>集合</label><input type="text" id="new-gather" placeholder="例: 7:20 クラブハウス前" style="width:180px;"></div>
+        <div class="form-field"><label>スタート</label><input type="text" id="new-start" placeholder="例: 8:00 OUT" style="width:130px;"></div>
         <div class="form-field"><label>人数</label><input type="number" id="new-players" placeholder="8" style="width:70px;" min="1" max="30"></div>
+        <div class="form-field" style="min-width:240px;"><label>メモ</label><input type="text" id="new-memo" placeholder="持ち物、注意事項など" style="width:240px;"></div>
         <div class="form-field"><label>&nbsp;</label><button class="btn btn-primary" onclick="addRound()">追加</button></div>
       </div>
     </div>
@@ -191,14 +197,23 @@ input:focus, select:focus { border-color: var(--green); box-shadow: 0 0 0 3px rg
     <div class="card">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
         <div class="card-title" style="margin:0;">メンバーランキング</div>
-        <div class="form-field" style="margin:0;">
-          <select id="rank-sort" onchange="renderRanking()" style="width:160px;">
-            <option value="avg">平均スコア順</option>
-            <option value="best">ベストスコア順</option>
-            <option value="rounds">ラウンド数順</option>
-          </select>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <div class="form-field" style="margin:0;">
+            <select id="rank-mode" onchange="renderRanking()" style="width:140px;">
+              <option value="gross">グロス順位</option>
+              <option value="net">ネット順位</option>
+            </select>
+          </div>
+          <div class="form-field" style="margin:0;">
+            <select id="rank-sort" onchange="renderRanking()" style="width:160px;">
+              <option value="avg">平均スコア順</option>
+              <option value="best">ベストスコア順</option>
+              <option value="rounds">ラウンド数順</option>
+            </select>
+          </div>
         </div>
       </div>
+      <div class="muted" id="rank-note" style="margin-bottom:10px;"></div>
       <div class="tbl-wrap">
         <table><thead><tr><th>順位</th><th>名前</th><th>参加</th><th>平均スコア</th><th>ベスト</th><th>ワースト</th></tr></thead>
         <tbody id="rank-body"><tr><td colspan="6"><div class="loading"><div class="spinner"></div>読み込み中...</div></td></tr></tbody></table>
@@ -211,14 +226,15 @@ input:focus, select:focus { border-color: var(--green); box-shadow: 0 0 0 3px rg
     <div class="card">
       <div class="card-title">メンバー一覧</div>
       <div class="tbl-wrap">
-        <table><thead><tr><th>名前</th><th>参加回数</th><th>平均スコア</th><th>ベストスコア</th><th></th></tr></thead>
-        <tbody id="member-body"><tr><td colspan="5"><div class="loading"><div class="spinner"></div>読み込み中...</div></td></tr></tbody></table>
+        <table><thead><tr><th>名前</th><th>ハンデ</th><th>参加回数</th><th>平均スコア</th><th>ベストスコア</th><th>直近5回平均</th><th></th></tr></thead>
+        <tbody id="member-body"><tr><td colspan="7"><div class="loading"><div class="spinner"></div>読み込み中...</div></td></tr></tbody></table>
       </div>
     </div>
     <div class="card">
       <div class="card-title">メンバーを追加</div>
       <div class="form-row">
         <div class="form-field"><label>氏名</label><input type="text" id="new-member" placeholder="例: 弘前 太郎" style="width:180px;"></div>
+        <div class="form-field"><label>ハンデ</label><input type="number" id="new-handicap" placeholder="0" style="width:90px;" min="0" max="54"></div>
         <div class="form-field"><label>&nbsp;</label><button class="btn btn-primary" onclick="addMember()">追加</button></div>
       </div>
     </div>
@@ -288,13 +304,23 @@ function getStats(memberId) {
   const s = Object.values(scores)
     .map(row => row[memberId])
     .filter(v => v !== null && v !== undefined && !isNaN(v));
-  if (!s.length) return { rounds: 0, avg: null, best: null, worst: null };
+  if (!s.length) return { rounds: 0, avg: null, best: null, worst: null, recentAvg: null };
+  const recent = s.slice(-5);
   return {
     rounds: s.length,
     avg: Math.round(s.reduce((a,b)=>a+b,0)/s.length*10)/10,
     best: Math.min(...s),
-    worst: Math.max(...s)
+    worst: Math.max(...s),
+    recentAvg: Math.round(recent.reduce((a,b)=>a+b,0)/recent.length*10)/10
   };
+}
+
+function fmtDate(v) {
+  if (!v) return '';
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
+  const d = new Date(v);
+  if (Number.isNaN(d.getTime())) return v;
+  return `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`;
 }
 
 function renderAll() {
@@ -308,19 +334,27 @@ function renderAll() {
 // ---- Schedule ----
 window.renderSchedule = function() {
   document.getElementById('sched-body').innerHTML = rounds.length === 0
-    ? `<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:24px;">ラウンドがまだありません</td></tr>`
+    ? `<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:24px;">ラウンドがまだありません</td></tr>`
     : rounds.map((r,i) => {
         const badge = r.done
           ? `<span class="badge badge-green">完了</span>`
           : `<span class="badge badge-blue">予定</span>`;
+        const info = [r.gatherTime ? `集合: ${r.gatherTime}` : '', r.startTime ? `開始: ${r.startTime}` : '', r.memo ? `メモ: ${r.memo}` : '']
+          .filter(Boolean)
+          .join('<br>');
         return `<tr>
           <td style="color:var(--text-muted);font-family:'DM Mono',monospace;font-size:12px;">第${i+1}回</td>
-          <td style="font-weight:500;">${r.date||''}</td>
+          <td style="font-weight:500;">${fmtDate(r.date)||''}</td>
           <td>${r.course||''}</td>
           <td style="color:var(--text-sub);">${r.players ? r.players+'名' : '—'}</td>
           <td style="font-size:12px;color:var(--text-muted);max-width:180px;white-space:normal;">${r.fee||'—'}</td>
+          <td style="font-size:12px;color:var(--text-sub);max-width:220px;white-space:normal;">${info || '—'}</td>
           <td>${badge}</td>
-          <td><button class="btn btn-sm btn-danger" onclick="deleteRound('${r.id}',${i})">削除</button></td>
+          <td style="display:flex;gap:6px;flex-wrap:wrap;">
+            <button class="btn btn-sm" onclick="editRound('${r.id}')">編集</button>
+            <button class="btn btn-sm btn-copy" onclick="copyRoundMessage('${r.id}',${i})">案内文</button>
+            <button class="btn btn-sm btn-danger" onclick="deleteRound('${r.id}',${i})">削除</button>
+          </td>
         </tr>`;
       }).join('');
 }
@@ -329,15 +363,65 @@ window.addRound = async function() {
   const date = document.getElementById('new-date').value.trim();
   const course = document.getElementById('new-course').value.trim();
   const fee = document.getElementById('new-fee').value.trim();
-  const players = parseInt(document.getElementById('new-players').value) || null;
+  const gatherTime = document.getElementById('new-gather').value.trim();
+  const startTime = document.getElementById('new-start').value.trim();
+  const memo = document.getElementById('new-memo').value.trim();
+  const rawPlayers = document.getElementById('new-players').value;
+  const players = rawPlayers !== '' ? parseInt(rawPlayers) : null;
   if (!date || !course) { toast('日付とコース名は必須です'); return; }
+  if (players !== null && (isNaN(players) || players < 1 || players > 30)) { toast('人数は1〜30で入力してください'); return; }
   const id = 'round_' + Date.now();
-  await setDoc(doc(db, 'rounds', id), { date, course, fee: fee||'未定', players, done: false, order: rounds.length });
+  await setDoc(doc(db, 'rounds', id), { date, course, fee: fee||'未定', gatherTime, startTime, memo, players, done: false, order: rounds.length });
   document.getElementById('new-date').value = '';
   document.getElementById('new-course').value = '';
   document.getElementById('new-fee').value = '';
+  document.getElementById('new-gather').value = '';
+  document.getElementById('new-start').value = '';
+  document.getElementById('new-memo').value = '';
   document.getElementById('new-players').value = '';
   toast('ラウンドを追加しました');
+}
+
+window.editRound = async function(id) {
+  const r = rounds.find(x => x.id === id);
+  if (!r) return;
+  const date = prompt('日付 (YYYY-MM-DD)', r.date || '');
+  if (date === null) return;
+  const course = prompt('コース名', r.course || '');
+  if (course === null || !course.trim()) return;
+  const fee = prompt('プレー代', r.fee || '未定');
+  if (fee === null) return;
+  const gatherTime = prompt('集合情報', r.gatherTime || '');
+  if (gatherTime === null) return;
+  const startTime = prompt('スタート情報', r.startTime || '');
+  if (startTime === null) return;
+  const memo = prompt('メモ', r.memo || '');
+  if (memo === null) return;
+  await updateDoc(doc(db, 'rounds', id), {
+    date: date.trim(),
+    course: course.trim(),
+    fee: fee.trim() || '未定',
+    gatherTime: gatherTime.trim(),
+    startTime: startTime.trim(),
+    memo: memo.trim()
+  });
+  toast('ラウンド情報を更新しました');
+}
+
+window.copyRoundMessage = async function(id, i) {
+  const r = rounds.find(x => x.id === id);
+  if (!r) return;
+  const msg = [
+    `【第${i+1}回 R8ツアー案内】`,
+    `日付: ${fmtDate(r.date) || '未定'}`,
+    `コース: ${r.course || '未定'}`,
+    `集合: ${r.gatherTime || '未定'}`,
+    `開始: ${r.startTime || '未定'}`,
+    `料金: ${r.fee || '未定'}`,
+    `備考: ${r.memo || 'なし'}`
+  ].join('\n');
+  await navigator.clipboard.writeText(msg);
+  toast('案内文をコピーしました');
 }
 
 window.deleteRound = async function(id, i) {
@@ -350,7 +434,7 @@ window.deleteRound = async function(id, i) {
 window.populateRoundSelect = function() {
   const sel = document.getElementById('score-round');
   const prev = sel.value;
-  sel.innerHTML = rounds.map((r,i) => `<option value="${r.id}">第${i+1}回 — ${r.date} ${r.course}</option>`).join('');
+  sel.innerHTML = rounds.map((r,i) => `<option value="${r.id}">第${i+1}回 — ${fmtDate(r.date)} ${r.course}</option>`).join('');
   if (prev && rounds.find(r=>r.id===prev)) sel.value = prev;
   renderScoreInput();
 }
@@ -363,7 +447,7 @@ window.renderScoreInput = function() {
     return `<tr>
       <td style="font-weight:500;">${m.name}</td>
       <td style="text-align:center;">
-        <input type="number" class="score-inp" data-mid="${m.id}" value="${val}" placeholder="—" min="50" max="999">
+        <input type="number" class="score-inp" data-mid="${m.id}" value="${val}" placeholder="—" min="55" max="200">
       </td>
       <td style="text-align:center;">
         <input type="checkbox" data-mid="${m.id}" ${val!=='' ? 'checked' : ''} onchange="toggleParticipant(this,'${ri}')">
@@ -391,14 +475,29 @@ window.saveScores = async function() {
   if (!ri) return;
   const ind = document.getElementById('saving-ind');
   ind.classList.add('active');
-  const data = {};
-  document.querySelectorAll('#score-body input[type=number]').forEach(inp => {
-    const v = inp.value !== '' ? parseInt(inp.value) : null;
-    data[inp.dataset.mid] = v;
-  });
-  await setDoc(doc(db, 'scores', ri), data);
-  ind.classList.remove('active');
-  toast('スコアを保存しました ✓');
+  try {
+    const data = {};
+    const improved = [];
+    document.querySelectorAll('#score-body input[type=number]').forEach(inp => {
+      const v = inp.value !== '' ? parseInt(inp.value) : null;
+      if (v !== null && (isNaN(v) || v < 55 || v > 200)) {
+        throw new Error('score_range_error');
+      }
+      if (v !== null) {
+        const m = members.find(x => x.id === inp.dataset.mid);
+        const prevStats = getStats(inp.dataset.mid);
+        if (m && prevStats.best !== null && v < prevStats.best) improved.push(`${m.name}(${prevStats.best}→${v})`);
+      }
+      data[inp.dataset.mid] = v;
+    });
+    await setDoc(doc(db, 'scores', ri), data);
+    toast(improved.length ? `保存完了 / ベスト更新: ${improved.join('、')}` : 'スコアを保存しました ✓');
+  } catch (e) {
+    if (e.message === 'score_range_error') toast('スコアは55〜200で入力してください');
+    else toast('保存に失敗しました');
+  } finally {
+    ind.classList.remove('active');
+  }
 }
 
 window.markRoundDone = async function() {
@@ -413,8 +512,17 @@ window.markRoundDone = async function() {
 // ---- Ranking ----
 window.renderRanking = function() {
   const sort = document.getElementById('rank-sort').value;
-  const stats = members.map(m => ({ name: m.name, ...getStats(m.id) })).filter(m=>m.rounds>0);
+  const mode = document.getElementById('rank-mode').value;
+  const stats = members.map(m => {
+    const s = getStats(m.id);
+    const hdcp = Number(m.handicap || 0);
+    if (mode === 'net' && s.rounds > 0) {
+      return { name: m.name, rounds: s.rounds, avg: Math.round((s.avg - hdcp) * 10) / 10, best: s.best - hdcp, worst: s.worst - hdcp };
+    }
+    return { name: m.name, rounds: s.rounds, avg: s.avg, best: s.best, worst: s.worst };
+  }).filter(m=>m.rounds>0);
   stats.sort((a,b) => sort==='avg' ? a.avg-b.avg : sort==='best' ? a.best-b.best : b.rounds-a.rounds);
+  document.getElementById('rank-note').textContent = mode === 'net' ? 'ネット順位: 各メンバーのハンデを差し引いたスコアで表示' : 'グロス順位: 入力スコアをそのまま表示';
   if (!stats.length) {
     document.getElementById('rank-body').innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:24px;">スコアがまだありません</td></tr>`;
     return;
@@ -437,11 +545,17 @@ window.renderRanking = function() {
 window.renderMembers = function() {
   document.getElementById('member-body').innerHTML = members.map(m => {
     const s = getStats(m.id);
+    const hdcp = m.handicap ?? 0;
     return `<tr>
       <td style="font-weight:500;">${m.name}</td>
+      <td style="font-family:'DM Mono',monospace;">
+        ${hdcp}
+        <button class="btn btn-sm" onclick="editHandicap('${m.id}')">編集</button>
+      </td>
       <td style="color:var(--text-sub);">${s.rounds}回</td>
       <td style="font-family:'DM Mono',monospace;">${s.avg !== null ? s.avg : '—'}</td>
       <td style="color:${s.best?'var(--green)':'inherit'};font-weight:${s.best?700:400};font-family:'DM Mono',monospace;">${s.best !== null ? s.best : '—'}</td>
+      <td style="font-family:'DM Mono',monospace;">${s.recentAvg !== null ? s.recentAvg : '—'}</td>
       <td><button class="btn btn-sm btn-danger" onclick="deleteMember('${m.id}')">削除</button></td>
     </tr>`;
   }).join('');
@@ -449,11 +563,26 @@ window.renderMembers = function() {
 
 window.addMember = async function() {
   const name = document.getElementById('new-member').value.trim();
+  const rawHandicap = document.getElementById('new-handicap').value;
+  const handicap = rawHandicap !== '' ? parseInt(rawHandicap) : 0;
   if (!name) return;
+  if (isNaN(handicap) || handicap < 0 || handicap > 54) { toast('ハンデは0〜54で入力してください'); return; }
   const id = 'member_' + Date.now();
-  await setDoc(doc(db, 'members', id), { name, order: members.length });
+  await setDoc(doc(db, 'members', id), { name, handicap, order: members.length });
   document.getElementById('new-member').value = '';
+  document.getElementById('new-handicap').value = '';
   toast(`${name} を追加しました`);
+}
+
+window.editHandicap = async function(id) {
+  const m = members.find(x => x.id === id);
+  if (!m) return;
+  const v = prompt(`${m.name} のハンデを入力 (0-54)`, String(m.handicap ?? 0));
+  if (v === null) return;
+  const handicap = parseInt(v);
+  if (isNaN(handicap) || handicap < 0 || handicap > 54) { toast('ハンデは0〜54で入力してください'); return; }
+  await updateDoc(doc(db, 'members', id), { handicap });
+  toast('ハンデを更新しました');
 }
 
 window.deleteMember = async function(id) {
@@ -484,7 +613,7 @@ async function seedIfEmpty() {
   const initialMembers = ['袴田 健一','中川 晃','笹川 和彦','三浦 卓也','桂木 能久','中村 英世','庄司 聡','加藤 勇樹','髙橋 渓太','二ツ森 友輝','小笠原 康晃','大湯 健介','樋口 颯士'];
   for (let i=0; i<initialMembers.length; i++) {
     const id = 'member_' + (1000+i);
-    await setDoc(doc(db, 'members', id), { name: initialMembers[i], order: i });
+    await setDoc(doc(db, 'members', id), { name: initialMembers[i], handicap: 0, order: i });
   }
 
   const initialRounds = [
