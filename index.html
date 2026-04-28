@@ -116,6 +116,27 @@ input:focus, select:focus { border-color: var(--green); box-shadow: 0 0 0 3px rg
 /* Saving indicator */
 .saving { display: none; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); }
 .saving.active { display: flex; }
+
+/* Hole score table */
+.hole-score-wrap { overflow-x: auto; margin-top: 12px; }
+.hole-tbl { border-collapse: collapse; font-size: 12px; min-width: 900px; width: 100%; }
+.hole-tbl th, .hole-tbl td { border: 1px solid var(--border); padding: 6px 8px; text-align: center; white-space: nowrap; }
+.hole-tbl thead tr:first-child th { background: var(--green); color: white; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; }
+.hole-tbl .par-row th { background: #F0FBF4; color: var(--green); font-weight: 700; font-family: 'DM Mono', monospace; }
+.hole-tbl .name-col { text-align: left; font-weight: 500; min-width: 90px; background: #FAFAF8; position: sticky; left: 0; z-index: 1; border-right: 2px solid var(--border); }
+.hole-tbl .section-total { background: #F7F9FF; font-weight: 700; font-family: 'DM Mono', monospace; color: var(--blue); }
+.hole-tbl .grand-total { background: #FFF7ED; font-weight: 700; font-family: 'DM Mono', monospace; color: var(--gold); }
+.hole-inp { width: 36px; height: 28px; text-align: center; font-size: 12px; font-family: 'DM Mono', monospace; border: 1px solid var(--border); border-radius: 4px; background: var(--bg); color: var(--text); outline: none; padding: 0 2px; }
+.hole-inp:focus { border-color: var(--green); background: white; box-shadow: 0 0 0 2px rgba(45,106,79,0.1); }
+.hole-inp.eagle { background: #DBEAFE; color: var(--blue); font-weight: 700; }
+.hole-inp.birdie { background: #D1FAE5; color: #047857; font-weight: 700; }
+.hole-inp.par-cell { background: #F0FBF4; }
+.hole-inp.bogey { background: #FEF3C7; color: var(--gold); }
+.hole-inp.double { background: #FEE2E2; color: var(--red); }
+.hole-inp.triple { background: #FECACA; color: #991B1B; font-weight: 700; }
+.score-mode-toggle { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+.toggle-btn { height: 30px; padding: 0 14px; font-size: 12px; font-weight: 500; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text-sub); cursor: pointer; font-family: inherit; transition: all 0.15s; }
+.toggle-btn.active { background: var(--green); color: white; border-color: var(--green); }
 </style>
 </head>
 <body>
@@ -159,7 +180,17 @@ input:focus, select:focus { border-color: var(--green); box-shadow: 0 0 0 3px rg
       <div class="card-title">ラウンドを追加</div>
       <div class="form-row">
         <div class="form-field"><label>日付</label><input type="date" id="new-date" style="width:170px;"></div>
-        <div class="form-field"><label>コース名</label><input type="text" id="new-course" placeholder="コース名" style="width:180px;"></div>
+        <div class="form-field"><label>コース名</label>
+          <select id="new-course" style="width:220px;">
+            <option value="">-- コースを選択 --</option>
+            <option value="びわの平ゴルフ倶楽部">びわの平ゴルフ倶楽部</option>
+            <option value="津軽高原ゴルフ場">津軽高原ゴルフ場</option>
+            <option value="津軽カントリークラブ">津軽カントリークラブ</option>
+            <option value="青森ロイヤルゴルフ倶楽部">青森ロイヤルゴルフ倶楽部</option>
+            <option value="夏泊ゴルフリンクス">夏泊ゴルフリンクス</option>
+            <option value="秋田北空港クラシックゴルフ倶楽部">秋田北空港クラシックゴルフ倶楽部</option>
+          </select>
+        </div>
         <div class="form-field"><label>プレー代</label><input type="text" id="new-fee" placeholder="例: 12,000円（昼食付）" style="width:180px;"></div>
         <div class="form-field"><label>スタート</label><input type="text" id="new-start" placeholder="例: 8:00 OUT" style="width:130px;"></div>
         <div class="form-field"><label>人数</label><input type="number" id="new-players" placeholder="8" style="width:70px;" min="1" max="30"></div>
@@ -175,15 +206,35 @@ input:focus, select:focus { border-color: var(--green); box-shadow: 0 0 0 3px rg
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
         <div class="form-field" style="margin:0;">
           <label>ラウンドを選択</label>
-          <select id="score-round" onchange="renderScoreInput()" style="width:260px;"></select>
+          <select id="score-round" onchange="renderScoreInput()" style="width:280px;"></select>
         </div>
         <div class="saving" id="saving-ind"><div class="spinner"></div>保存中...</div>
       </div>
-      <div class="card-title">スコアを入力して「保存」を押してください</div>
-      <div class="tbl-wrap">
-        <table><thead><tr><th>名前</th><th style="text-align:center;">スコア</th><th style="text-align:center;">参加</th></tr></thead>
-        <tbody id="score-body"></tbody></table>
+
+      <div class="score-mode-toggle">
+        <span style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;">入力モード:</span>
+        <button class="toggle-btn active" id="mode-btn-total" onclick="setScoreMode('total')">① 合計スコア入力</button>
+        <button class="toggle-btn" id="mode-btn-hole" onclick="setScoreMode('hole')">② ホール別入力</button>
       </div>
+
+      <!-- ① 合計スコア入力（先） -->
+      <div id="score-panel-total">
+        <div class="card-title">参加メンバーにチェックを入れ、合計スコアを入力してください</div>
+        <div class="tbl-wrap">
+
+          <table><thead><tr><th>名前</th><th style="text-align:center;">合計スコア</th><th style="text-align:center;">参加</th></tr></thead>
+          <tbody id="score-body"></tbody></table>
+        </div>
+      </div>
+
+      <!-- ② ホール別入力（後） -->
+      <div id="score-panel-hole" style="display:none;">
+        <div class="card-title">① で参加チェックしたメンバーのホール別スコアを入力してください</div>
+        <div id="hole-score-container">
+          <div style="color:var(--text-muted);font-size:13px;padding:16px 0;">先に①で参加メンバーを設定してください</div>
+        </div>
+      </div>
+
       <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn btn-primary" onclick="saveScores()">保存</button>
         <button class="btn" onclick="markRoundDone()">このラウンドを完了にする</button>
@@ -423,43 +474,240 @@ window.deleteRound = async function(id, i) {
   toast('削除しました');
 }
 
+// ---- Course PAR data (from Excel) ----
+const COURSE_PARS = {
+  'びわの平ゴルフ倶楽部':    { out:[5,4,5,4,4,3,4,3,4], inn:[4,5,4,3,4,3,4,5,4] },
+  '津軽高原ゴルフ場':        { out:[5,3,4,3,4,5,4,4,4], inn:[4,3,4,5,3,4,4,4,5] },
+  '津軽カントリークラブ':    { out:[5,4,4,4,5,3,4,3,4], inn:[5,3,4,4,4,3,4,5,4] },
+  '青森ロイヤルゴルフ倶楽部':{ out:[5,4,3,4,4,3,5,4,4], inn:[4,4,3,4,4,5,4,3,5] },
+  '夏泊ゴルフリンクス':      { out:[5,3,4,4,5,4,3,4,4], inn:[4,4,3,4,5,4,5,3,4] },
+  '秋田北空港クラシックゴルフ倶楽部': { out:[4,4,3,5,3,4,4,4,5], inn:[5,4,4,3,4,5,4,3,4] },
+};
+
+let scoreMode = 'total'; // 'total' or 'hole'  ← デフォルトを合計に変更
+// holeScores[memberId][hole1..18] stored locally until save
+let holeScoresLocal = {}; // { memberId: [18 values or null] }
+
+// 参加チェック済みメンバーIDセット
+let participantSet = new Set();
+
+window.setScoreMode = function(mode) {
+  scoreMode = mode;
+  document.getElementById('mode-btn-total').classList.toggle('active', mode==='total');
+  document.getElementById('mode-btn-hole').classList.toggle('active', mode==='hole');
+  document.getElementById('score-panel-total').style.display = mode==='total' ? '' : 'none';
+  document.getElementById('score-panel-hole').style.display = mode==='hole' ? '' : 'none';
+  if (mode==='total') renderScoreInputTotal();
+  else renderHoleScoreTable();
+}
+
+function getColorClass(score, par) {
+  if (!score || !par) return '';
+  const diff = score - par;
+  if (diff <= -2) return 'eagle';
+  if (diff === -1) return 'birdie';
+  if (diff === 0) return 'par-cell';
+  if (diff === 1) return 'bogey';
+  if (diff === 2) return 'double';
+  if (diff >= 3) return 'triple';
+  return '';
+}
+
+// ラウンドのコース名からPARデータを取得
+function getParsForCurrentRound() {
+  const ri = document.getElementById('score-round').value;
+  const rnd = rounds.find(r=>r.id===ri);
+  if (!rnd) return null;
+  return COURSE_PARS[rnd.course] || null;
+}
+
+window.renderHoleScoreTable = function() {
+  const ri = document.getElementById('score-round').value;
+  const container = document.getElementById('hole-score-container');
+  const pars = getParsForCurrentRound();
+
+  // 参加チェックされているメンバーのみ
+  const activeMembers = members.filter(m => participantSet.has(m.id));
+
+  if (activeMembers.length === 0) {
+    container.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:16px 0;">①で参加メンバーにチェックを入れてください</div>';
+    return;
+  }
+  if (!pars) {
+    container.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:16px 0;">このコースのPARデータが登録されていません（ラウンドのコース名を確認してください）</div>';
+    return;
+  }
+
+  const allPars = [...pars.out, ...pars.inn];
+  const row = scores[ri] || {};
+
+  // Init local hole scores from saved data or empty
+  activeMembers.forEach(m => {
+    if (!holeScoresLocal[m.id]) {
+      const saved = row[m.id + '_holes'];
+      holeScoresLocal[m.id] = saved ? [...saved] : Array(18).fill(null);
+    }
+  });
+
+  const outPar = pars.out.reduce((a,b)=>a+b,0);
+  const inPar = pars.inn.reduce((a,b)=>a+b,0);
+  const totalPar = outPar + inPar;
+
+  let html = `<div class="hole-score-wrap"><table class="hole-tbl">
+    <thead>
+      <tr>
+        <th class="name-col" rowspan="3">名前</th>
+        <th colspan="9" style="background:var(--green);">OUT</th>
+        <th style="background:#1a4d38;font-size:10px;" rowspan="2">OUT計</th>
+        <th colspan="9" style="background:#1a4d38;">IN</th>
+        <th style="background:#1a4d38;font-size:10px;" rowspan="2">IN計</th>
+        <th style="background:#1a4d38;font-size:10px;" rowspan="2">TOTAL</th>
+      </tr>
+      <tr>
+        <th style="background:#e8f5ee;color:var(--text-sub);font-size:11px;">1</th>
+        <th style="background:#e8f5ee;color:var(--text-sub);font-size:11px;">2</th>
+        <th style="background:#e8f5ee;color:var(--text-sub);font-size:11px;">3</th>
+        <th style="background:#e8f5ee;color:var(--text-sub);font-size:11px;">4</th>
+        <th style="background:#e8f5ee;color:var(--text-sub);font-size:11px;">5</th>
+        <th style="background:#e8f5ee;color:var(--text-sub);font-size:11px;">6</th>
+        <th style="background:#e8f5ee;color:var(--text-sub);font-size:11px;">7</th>
+        <th style="background:#e8f5ee;color:var(--text-sub);font-size:11px;">8</th>
+        <th style="background:#e8f5ee;color:var(--text-sub);font-size:11px;">9</th>
+        <th style="background:#e8f5ee;color:var(--text-sub);font-size:11px;">10</th>
+        <th style="background:#e8f5ee;color:var(--text-sub);font-size:11px;">11</th>
+        <th style="background:#e8f5ee;color:var(--text-sub);font-size:11px;">12</th>
+        <th style="background:#e8f5ee;color:var(--text-sub);font-size:11px;">13</th>
+        <th style="background:#e8f5ee;color:var(--text-sub);font-size:11px;">14</th>
+        <th style="background:#e8f5ee;color:var(--text-sub);font-size:11px;">15</th>
+        <th style="background:#e8f5ee;color:var(--text-sub);font-size:11px;">16</th>
+        <th style="background:#e8f5ee;color:var(--text-sub);font-size:11px;">17</th>
+        <th style="background:#e8f5ee;color:var(--text-sub);font-size:11px;">18</th>
+      </tr>
+      <tr class="par-row">
+        ${pars.out.map(p=>`<th>P${p}</th>`).join('')}
+        <th class="section-total">P${outPar}</th>
+        ${pars.inn.map(p=>`<th>P${p}</th>`).join('')}
+        <th class="section-total">P${inPar}</th>
+        <th class="grand-total">P${totalPar}</th>
+      </tr>
+    </thead>
+    <tbody>`;
+
+  activeMembers.forEach(m => {
+    const holes = holeScoresLocal[m.id] || Array(18).fill(null);
+    const outTotal = holes.slice(0,9).reduce((a,v)=>a+(v||0),0);
+    const inTotal = holes.slice(9,18).reduce((a,v)=>a+(v||0),0);
+    const grandTotal = outTotal + inTotal;
+    const hasAny = holes.some(v=>v!==null && v!=='');
+
+    html += `<tr><td class="name-col">${m.name}</td>`;
+    for (let h=0; h<18; h++) {
+      const par = allPars[h];
+      const val = holes[h] !== null ? holes[h] : '';
+      const cls = val !== '' ? getColorClass(Number(val), par) : '';
+      html += `<td><input type="text" inputmode="numeric" pattern="[0-9]*" class="hole-inp ${cls}" data-mid="${m.id}" data-hole="${h}" value="${val}" oninput="onHoleInput(this,${par})"></td>`;
+      if (h === 8) html += `<td class="section-total" id="out-${m.id}">${hasAny ? outTotal||'' : ''}</td>`;
+    }
+    html += `<td class="section-total" id="in-${m.id}">${hasAny ? inTotal||'' : ''}</td>
+      <td class="grand-total" id="total-${m.id}">${hasAny ? grandTotal||'' : ''}</td>
+    </tr>`;
+  });
+
+  html += `</tbody></table></div>`;
+  container.innerHTML = html;
+}
+
+window.onHoleInput = function(inp, par) {
+  // 数字以外を除去
+  inp.value = inp.value.replace(/[^0-9]/g, '');
+
+  const mid = inp.dataset.mid;
+  const hole = parseInt(inp.dataset.hole);
+  const val = inp.value !== '' ? parseInt(inp.value) : null;
+  if (!holeScoresLocal[mid]) holeScoresLocal[mid] = Array(18).fill(null);
+  holeScoresLocal[mid][hole] = val;
+  inp.className = 'hole-inp';
+  if (val !== null && val > 0) inp.classList.add(getColorClass(val, par));
+
+  const cells = [...document.querySelectorAll(`.hole-inp[data-mid="${mid}"]`)];
+  const vals = cells.map(c => c.value !== '' ? parseInt(c.value) : 0);
+  const outTotal = vals.slice(0,9).reduce((a,b)=>a+b,0);
+  const inTotal = vals.slice(9,18).reduce((a,b)=>a+b,0);
+  const el = (id) => document.getElementById(id);
+  if (el(`out-${mid}`)) el(`out-${mid}`).textContent = outTotal || '';
+  if (el(`in-${mid}`)) el(`in-${mid}`).textContent = inTotal || '';
+  if (el(`total-${mid}`)) el(`total-${mid}`).textContent = (outTotal+inTotal) || '';
+
+  // 合計スコア欄にも反映
+  const totalInp = document.querySelector(`#score-body input[type=number][data-mid="${mid}"]`);
+  if (totalInp && (outTotal+inTotal) > 0) totalInp.value = outTotal + inTotal;
+}
+
 // ---- Score ----
 window.populateRoundSelect = function() {
   const sel = document.getElementById('score-round');
   const prev = sel.value;
   sel.innerHTML = rounds.map((r,i) => `<option value="${r.id}">第${i+1}回 — ${fmtDate(r.date)} ${r.course}</option>`).join('');
   if (prev && rounds.find(r=>r.id===prev)) sel.value = prev;
+  holeScoresLocal = {};
+  participantSet = new Set();
   renderScoreInput();
 }
 
 window.renderScoreInput = function() {
+  holeScoresLocal = {};
+  participantSet = new Set();
+  // 保存済み参加者を復元
+  const ri = document.getElementById('score-round').value;
+  const row = scores[ri] || {};
+  members.forEach(m => {
+    if (row[m.id] !== undefined && row[m.id] !== null) participantSet.add(m.id);
+  });
+  if (scoreMode === 'total') renderScoreInputTotal();
+  else renderHoleScoreTable();
+}
+
+window.renderScoreInputTotal = function() {
   const ri = document.getElementById('score-round').value;
   const row = scores[ri] || {};
   document.getElementById('score-body').innerHTML = members.map(m => {
     const val = row[m.id] !== undefined && row[m.id] !== null ? row[m.id] : '';
+    const checked = participantSet.has(m.id) || val !== '';
+    if (checked) participantSet.add(m.id);
     return `<tr>
       <td style="font-weight:500;">${m.name}</td>
       <td style="text-align:center;">
-        <input type="number" class="score-inp" data-mid="${m.id}" value="${val}" placeholder="—" min="55" max="200">
+        <input type="number" class="score-inp" data-mid="${m.id}" value="${val}" placeholder="—" min="18" max="200" ${checked ? '' : 'disabled style="opacity:0.35;"'} oninput="onTotalScoreInput(this)">
       </td>
       <td style="text-align:center;">
-        <input type="checkbox" data-mid="${m.id}" ${val!=='' ? 'checked' : ''} onchange="toggleParticipant(this,'${ri}')">
+        <input type="checkbox" data-mid="${m.id}" ${checked ? 'checked' : ''} onchange="toggleParticipant(this)">
       </td>
     </tr>`;
   }).join('');
-
-  document.querySelectorAll('#score-body input[type=number]').forEach(inp => {
-    inp.addEventListener('input', () => {
-      const cb = document.querySelector(`#score-body input[type=checkbox][data-mid="${inp.dataset.mid}"]`);
-      if (cb) cb.checked = inp.value !== '';
-    });
-  });
 }
 
-window.toggleParticipant = function(cb, ri) {
-  if (!cb.checked) {
-    const inp = document.querySelector(`#score-body input[type=number][data-mid="${cb.dataset.mid}"]`);
-    if (inp) inp.value = '';
+window.toggleParticipant = function(cb) {
+  const mid = cb.dataset.mid;
+  const inp = document.querySelector(`#score-body input[type=number][data-mid="${mid}"]`);
+  if (cb.checked) {
+    participantSet.add(mid);
+    if (inp) { inp.disabled = false; inp.style.opacity = '1'; }
+  } else {
+    participantSet.delete(mid);
+    if (inp) { inp.value = ''; inp.disabled = true; inp.style.opacity = '0.35'; }
+    holeScoresLocal[mid] = Array(18).fill(null);
+  }
+  // ホール別入力表を再描画（参加者が変わったので）
+  if (scoreMode === 'hole') renderHoleScoreTable();
+}
+
+window.onTotalScoreInput = function(inp) {
+  const mid = inp.dataset.mid;
+  const cb = document.querySelector(`#score-body input[type=checkbox][data-mid="${mid}"]`);
+  if (inp.value !== '' && cb && !cb.checked) {
+    cb.checked = true;
+    participantSet.add(mid);
+    inp.disabled = false; inp.style.opacity = '1';
   }
 }
 
@@ -471,23 +719,39 @@ window.saveScores = async function() {
   try {
     const data = {};
     const improved = [];
+
+    // 合計スコアパネルから値を取得
     document.querySelectorAll('#score-body input[type=number]').forEach(inp => {
+      const mid = inp.dataset.mid;
+      if (!participantSet.has(mid)) return;
       const v = inp.value !== '' ? parseInt(inp.value) : null;
-      if (v !== null && (isNaN(v) || v < 55 || v > 200)) {
+      if (v !== null && (isNaN(v) || v < 18 || v > 200)) {
         throw new Error('score_range_error');
       }
       if (v !== null) {
-        const m = members.find(x => x.id === inp.dataset.mid);
-        const prevStats = getStats(inp.dataset.mid);
+        const m = members.find(x => x.id === mid);
+        const prevStats = getStats(mid);
         if (m && prevStats.best !== null && v < prevStats.best) improved.push(`${m.name}(${prevStats.best}→${v})`);
+        data[mid] = v;
       }
-      data[inp.dataset.mid] = v;
     });
+
+    // ホール別スコアがあれば一緒に保存（合計も上書き）
+    Object.entries(holeScoresLocal).forEach(([mid, holes]) => {
+      if (!participantSet.has(mid)) return;
+      const hasAny = holes.some(v => v !== null && v !== '');
+      if (hasAny) {
+        const total = holes.reduce((a,v) => a + (v||0), 0);
+        data[mid + '_holes'] = holes;
+        if (total > 0) data[mid] = total;
+      }
+    });
+
     await setDoc(doc(db, 'scores', ri), data);
     toast(improved.length ? `保存完了 / ベスト更新: ${improved.join('、')}` : 'スコアを保存しました ✓');
   } catch (e) {
-    if (e.message === 'score_range_error') toast('スコアは55〜200で入力してください');
-    else toast('保存に失敗しました');
+    if (e.message === 'score_range_error') toast('スコアの値を確認してください');
+    else { console.error(e); toast('保存に失敗しました'); }
   } finally {
     ind.classList.remove('active');
   }
@@ -592,7 +856,7 @@ window.showTab = function(id, el) {
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   el.classList.add('active');
-  if (id==='score') populateRoundSelect();
+  if (id==='score') { scoreMode = 'total'; setScoreMode('total'); populateRoundSelect(); }
   if (id==='ranking') renderRanking();
   if (id==='members') renderMembers();
   if (id==='schedule') renderSchedule();
