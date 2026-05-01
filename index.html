@@ -146,6 +146,9 @@ input:focus, select:focus { border-color: var(--green); box-shadow: 0 0 0 3px rg
 .hdcp-badge { display: inline-block; background: #EDE9FE; color: #6D28D9; border-radius: 5px; padding: 2px 8px; font-size: 13px; font-weight: 700; font-family: 'DM Mono', monospace; min-width: 48px; text-align: center; }
 .hole-inp.hdcp-selected { outline: 2px solid #7C3AED; outline-offset: 1px; }
 .hole-inp.hdcp-capped { background: #F3E8FF !important; color: #6D28D9 !important; }
+.actions-cell { display: inline-flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.member-row { cursor: pointer; }
+.member-row.active td { background: #F0FBF4; }
 </style>
 </head>
 <body>
@@ -287,6 +290,10 @@ input:focus, select:focus { border-color: var(--green); box-shadow: 0 0 0 3px rg
         <table><thead><tr><th>名前</th><th>参加回数</th><th>平均スコア</th><th>ベストスコア</th><th></th></tr></thead>
         <tbody id="member-body"><tr><td colspan="5"><div class="loading"><div class="spinner"></div>読み込み中...</div></td></tr></tbody></table>
       </div>
+    </div>
+    <div class="card">
+      <div class="card-title">メンバースコア履歴</div>
+      <div id="member-history" class="muted">メンバー一覧の「履歴」ボタンを押すと、第何回のスコアかを表示します</div>
     </div>
     <div class="card">
       <div class="card-title">メンバーを追加</div>
@@ -439,11 +446,11 @@ window.renderSchedule = function() {
           <td style="font-size:12px;color:var(--text-muted);max-width:180px;white-space:normal;">${r.fee||'—'}</td>
           <td style="font-size:12px;color:var(--text-sub);max-width:220px;white-space:normal;">${info || '—'}</td>
           <td>${badge}</td>
-          <td style="display:flex;gap:6px;flex-wrap:wrap;">
+          <td><div class="actions-cell">
             <button class="btn btn-sm" onclick="editRound('${r.id}')">編集</button>
             <button class="btn btn-sm btn-copy" onclick="copyRoundMessage('${r.id}',${i})">案内文</button>
             <button class="btn btn-sm btn-danger" onclick="deleteRound('${r.id}',${i})">削除</button>
-          </td>
+          </div></td>
         </tr>`;
       }).join('');
 }
@@ -526,6 +533,7 @@ const COURSE_PARS = {
 let scoreMode = 'total'; // 'total' or 'hole'  ← デフォルトを合計に変更
 // holeScores[memberId][hole1..18] stored locally until save
 let holeScoresLocal = {}; // { memberId: [18 values or null] }
+let selectedMemberId = null;
 
 // 参加チェック済みメンバーIDセット
 let participantSet = new Set();
@@ -926,14 +934,93 @@ window.renderRanking = function() {
 window.renderMembers = function() {
   document.getElementById('member-body').innerHTML = members.map(m => {
     const s = getStats(m.id);
-    return `<tr>
+    const activeCls = selectedMemberId === m.id ? 'active' : '';
+    return `<tr class="member-row ${activeCls}" onclick="showMemberHistory('${m.id}')">
       <td style="font-weight:500;">${m.name}</td>
       <td style="color:var(--text-sub);">${s.rounds}回</td>
       <td style="font-family:'DM Mono',monospace;">${s.avg !== null ? s.avg : '—'}</td>
       <td style="color:${s.best?'var(--green)':'inherit'};font-weight:${s.best?700:400};font-family:'DM Mono',monospace;">${s.best !== null ? s.best : '—'}</td>
-      <td><button class="btn btn-sm btn-danger" onclick="deleteMember('${m.id}')">削除</button></td>
+      <td><div class="actions-cell"><button class="btn btn-sm btn-danger" onclick="event.stopPropagation();deleteMember('${m.id}')">削除</button></div></td>
     </tr>`;
   }).join('');
+  if (!members.length) {
+    const wrap = document.getElementById('member-history');
+    if (wrap) wrap.innerHTML = '<div class="muted">メンバーがまだいません</div>';
+    return;
+  }
+  const current = members.find(m => m.id === selectedMemberId) ? selectedMemberId : members[0].id;
+  showMemberHistory(current, false);
+}
+
+function fmtHoleSlice(arr, start, end) {
+  return arr.slice(start, end).map(v => (v !== null && v !== undefined && v !== '' ? v : '—')).join('-');
+}
+
+window.showMemberHistory = function(memberId, rerenderMembers = true) {
+  selectedMemberId = memberId;
+  if (rerenderMembers) renderMembers();
+  const wrap = document.getElementById('member-history');
+  const member = members.find(m => m.id === memberId);
+  if (!wrap || !member) return;
+
+  const view = getRoundsSortedByDate();
+  const rows = view
+    .map((r, i) => {
+      const row = scores[r.id] || {};
+      const gross = row[memberId];
+      const hdcp = row[memberId + '_hdcp'];
+      const holes = row[memberId + '_holes'];
+      const net = (gross !== undefined && gross !== null && hdcp !== undefined && hdcp !== null)
+        ? Math.round((Number(gross) - Number(hdcp)) * 10) / 10
+        : null;
+      if (gross === undefined || gross === null || isNaN(gross)) return null;
+      const hasHoles = Array.isArray(holes) && holes.length === 18;
+      const outTotal = hasHoles ? holes.slice(0, 9).reduce((a, v) => a + (Number(v) || 0), 0) : null;
+      const inTotal = hasHoles ? holes.slice(9, 18).reduce((a, v) => a + (Number(v) || 0), 0) : null;
+      const holeText = hasHoles ? `OUT: ${fmtHoleSlice(holes, 0, 9)} / IN: ${fmtHoleSlice(holes, 9, 18)}` : '—';
+      return {
+        no: i + 1,
+        date: fmtDate(r.date) || '—',
+        course: r.course || '—',
+        gross: gross,
+        hdcp: hdcp !== undefined && hdcp !== null ? hdcp : '—',
+        net: net !== null ? net : '—',
+        status: r.done ? '完了' : '予定',
+        outTotal: outTotal !== null ? outTotal : '—',
+        inTotal: inTotal !== null ? inTotal : '—',
+        holeText
+      };
+    })
+    .filter(Boolean);
+
+  if (!rows.length) {
+    wrap.innerHTML = `<div class="muted">${member.name} の入力済みスコアはまだありません</div>`;
+    return;
+  }
+
+  const avg = Math.round((rows.reduce((a, b) => a + Number(b.gross), 0) / rows.length) * 10) / 10;
+  wrap.innerHTML = `
+    <div style="margin-bottom:10px;font-weight:700;">${member.name} のスコア履歴（${rows.length}件 / 平均 ${avg}）</div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>回</th><th>日付</th><th>コース</th><th>グロス</th><th>HDCP</th><th>NET</th><th>OUT</th><th>IN</th><th>ホール別</th><th>状態</th></tr></thead>
+        <tbody>
+          ${rows.map(r => `<tr>
+            <td>第${r.no}回</td>
+            <td>${r.date}</td>
+            <td>${r.course}</td>
+            <td style="font-family:'DM Mono',monospace;font-weight:700;">${r.gross}</td>
+            <td style="font-family:'DM Mono',monospace;color:#6D28D9;">${r.hdcp}</td>
+            <td style="font-family:'DM Mono',monospace;color:#1D4ED8;">${r.net}</td>
+            <td style="font-family:'DM Mono',monospace;">${r.outTotal}</td>
+            <td style="font-family:'DM Mono',monospace;">${r.inTotal}</td>
+            <td style="font-size:12px;white-space:normal;min-width:320px;color:var(--text-sub);">${r.holeText}</td>
+            <td>${r.status === '完了' ? '<span class="badge badge-green">完了</span>' : '<span class="badge badge-blue">予定</span>'}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
 }
 
 window.addMember = async function() {
