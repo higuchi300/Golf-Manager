@@ -119,8 +119,8 @@ input:focus, select:focus { border-color: var(--green); box-shadow: 0 0 0 3px rg
 
 /* Hole score table */
 .hole-score-wrap { overflow-x: auto; margin-top: 12px; }
-.hole-tbl { border-collapse: collapse; font-size: 12px; min-width: 900px; width: 100%; }
-.hole-tbl th, .hole-tbl td { border: 1px solid var(--border); padding: 6px 8px; text-align: center; white-space: nowrap; }
+.hole-tbl { border-collapse: collapse; font-size: 12px; min-width: 1100px; width: 100%; }
+.hole-tbl th, .hole-tbl td { border: 1px solid var(--border); padding: 6px 10px; text-align: center; white-space: nowrap; }
 .hole-tbl thead tr:first-child th { background: var(--green); color: white; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; }
 .hole-tbl .par-row th { background: #F0FBF4; color: var(--green); font-weight: 700; font-family: 'DM Mono', monospace; }
 .hole-tbl .name-col { text-align: left; font-weight: 500; min-width: 90px; background: #FAFAF8; position: sticky; left: 0; z-index: 1; border-right: 2px solid var(--border); }
@@ -137,6 +137,15 @@ input:focus, select:focus { border-color: var(--green); box-shadow: 0 0 0 3px rg
 .score-mode-toggle { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
 .toggle-btn { height: 30px; padding: 0 14px; font-size: 12px; font-weight: 500; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text-sub); cursor: pointer; font-family: inherit; transition: all 0.15s; }
 .toggle-btn.active { background: var(--green); color: white; border-color: var(--green); }
+
+/* HDCP チェックボックス行 */
+.hole-tbl .chk-row td { background: #FAFAF8; padding: 4px 6px; }
+.hole-chk { width: 16px; height: 16px; accent-color: var(--green); cursor: pointer; }
+.hole-tbl .hdcp-row td { background: #F5F0FF; font-weight: 700; font-family: 'DM Mono', monospace; color: #6D28D9; font-size: 12px; }
+.hole-tbl .hdcp-row .name-col { color: #6D28D9; font-size: 11px; font-weight: 700; }
+.hdcp-badge { display: inline-block; background: #EDE9FE; color: #6D28D9; border-radius: 5px; padding: 2px 8px; font-size: 13px; font-weight: 700; font-family: 'DM Mono', monospace; min-width: 48px; text-align: center; }
+.hole-inp.hdcp-selected { outline: 2px solid #7C3AED; outline-offset: 1px; }
+.hole-inp.hdcp-capped { background: #F3E8FF !important; color: #6D28D9 !important; }
 </style>
 </head>
 <body>
@@ -222,7 +231,7 @@ input:focus, select:focus { border-color: var(--green); box-shadow: 0 0 0 3px rg
         <div class="card-title">参加メンバーにチェックを入れ、合計スコアを入力してください</div>
         <div class="tbl-wrap">
 
-          <table><thead><tr><th>名前</th><th style="text-align:center;">合計スコア</th><th style="text-align:center;">参加</th></tr></thead>
+          <table><thead><tr><th>名前</th><th style="text-align:center;">合計スコア</th><th style="text-align:center;">HDCP</th><th style="text-align:center;">NET</th><th style="text-align:center;">参加</th></tr></thead>
           <tbody id="score-body"></tbody></table>
         </div>
       </div>
@@ -562,26 +571,11 @@ window.renderHoleScoreTable = function() {
         <th colspan="9" style="background:#1a4d38;">IN</th>
         <th style="background:#1a4d38;font-size:10px;" rowspan="2">IN計</th>
         <th style="background:#1a4d38;font-size:10px;" rowspan="2">TOTAL</th>
+        <th style="background:#5B21B6;font-size:10px;" rowspan="2">HDCP</th>
+        <th style="background:#0F4C81;font-size:10px;" rowspan="2">NET</th>
       </tr>
       <tr>
-        <th style="background:#e8f5ee;color:var(--text-sub);font-size:11px;">1</th>
-        <th style="background:#e8f5ee;color:var(--text-sub);font-size:11px;">2</th>
-        <th style="background:#e8f5ee;color:var(--text-sub);font-size:11px;">3</th>
-        <th style="background:#e8f5ee;color:var(--text-sub);font-size:11px;">4</th>
-        <th style="background:#e8f5ee;color:var(--text-sub);font-size:11px;">5</th>
-        <th style="background:#e8f5ee;color:var(--text-sub);font-size:11px;">6</th>
-        <th style="background:#e8f5ee;color:var(--text-sub);font-size:11px;">7</th>
-        <th style="background:#e8f5ee;color:var(--text-sub);font-size:11px;">8</th>
-        <th style="background:#e8f5ee;color:var(--text-sub);font-size:11px;">9</th>
-        <th style="background:#e8f5ee;color:var(--text-sub);font-size:11px;">10</th>
-        <th style="background:#e8f5ee;color:var(--text-sub);font-size:11px;">11</th>
-        <th style="background:#e8f5ee;color:var(--text-sub);font-size:11px;">12</th>
-        <th style="background:#e8f5ee;color:var(--text-sub);font-size:11px;">13</th>
-        <th style="background:#e8f5ee;color:var(--text-sub);font-size:11px;">14</th>
-        <th style="background:#e8f5ee;color:var(--text-sub);font-size:11px;">15</th>
-        <th style="background:#e8f5ee;color:var(--text-sub);font-size:11px;">16</th>
-        <th style="background:#e8f5ee;color:var(--text-sub);font-size:11px;">17</th>
-        <th style="background:#e8f5ee;color:var(--text-sub);font-size:11px;">18</th>
+        ${[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18].map(n=>`<th style="background:#e8f5ee;color:var(--text-sub);font-size:11px;">${n}</th>`).join('')}
       </tr>
       <tr class="par-row">
         ${pars.out.map(p=>`<th>P${p}</th>`).join('')}
@@ -589,6 +583,13 @@ window.renderHoleScoreTable = function() {
         ${pars.inn.map(p=>`<th>P${p}</th>`).join('')}
         <th class="section-total">P${inPar}</th>
         <th class="grand-total">P${totalPar}</th>
+        <th style="background:#EDE9FE;"></th>
+        <th style="background:#DBEAFE;"></th>
+      </tr>
+      <tr class="chk-row">
+        <td class="name-col" style="font-size:10px;color:var(--text-muted);font-weight:700;">HDCP選択</td>
+        ${allPars.map((p,h)=>`<td><input type="checkbox" class="hole-chk" data-hole="${h}" data-par="${p}" onchange="onHdcpCheck()" checked></td>${h===8?'<td></td>':''}`).join('')}
+        <td></td><td></td><td></td><td></td>
       </tr>
     </thead>
     <tbody>`;
@@ -599,22 +600,72 @@ window.renderHoleScoreTable = function() {
     const inTotal = holes.slice(9,18).reduce((a,v)=>a+(v||0),0);
     const grandTotal = outTotal + inTotal;
     const hasAny = holes.some(v=>v!==null && v!=='');
+    const hdcp = hasAny ? calcHdcp(m.id, allPars) : null;
+    const net = (hasAny && hdcp !== null) ? Math.round((grandTotal - hdcp) * 10) / 10 : null;
 
     html += `<tr><td class="name-col">${m.name}</td>`;
     for (let h=0; h<18; h++) {
       const par = allPars[h];
       const val = holes[h] !== null ? holes[h] : '';
+      const cap = val !== '' ? Math.min(Number(val), par * 2) : '';
+      const isCapped = val !== '' && Number(val) > par * 2;
       const cls = val !== '' ? getColorClass(Number(val), par) : '';
-      html += `<td><input type="text" inputmode="numeric" pattern="[0-9]*" class="hole-inp ${cls}" data-mid="${m.id}" data-hole="${h}" value="${val}" oninput="onHoleInput(this,${par})"></td>`;
+      html += `<td><input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" class="hole-inp ${cls}${isCapped ? ' hdcp-capped' : ''}" data-mid="${m.id}" data-hole="${h}" value="${val}" oninput="onHoleInput(this,${par})" title="${isCapped ? `ダブルパー上限: ${par*2}` : ''}"></td>`;
       if (h === 8) html += `<td class="section-total" id="out-${m.id}">${hasAny ? outTotal||'' : ''}</td>`;
     }
     html += `<td class="section-total" id="in-${m.id}">${hasAny ? inTotal||'' : ''}</td>
       <td class="grand-total" id="total-${m.id}">${hasAny ? grandTotal||'' : ''}</td>
+      <td style="background:#EDE9FE;text-align:center;"><span class="hdcp-badge" id="hdcp-${m.id}">${hdcp !== null ? hdcp : '—'}</span></td>
+      <td style="background:#DBEAFE;text-align:center;font-weight:700;font-family:'DM Mono',monospace;color:#1D4ED8;"><span id="net-${m.id}">${net !== null ? net : '—'}</span></td>
     </tr>`;
   });
 
   html += `</tbody></table></div>`;
   container.innerHTML = html;
+}
+
+// HDCP計算: 選択されたホールの数値（ダブルパー上限）を合算 → (合算×1.5 - 72) × 0.8
+function calcHdcp(mid, allPars) {
+  const holes = holeScoresLocal[mid] || Array(18).fill(null);
+  const chks = document.querySelectorAll('.hole-chk');
+  let sum = 0; let hasVal = false;
+  chks.forEach(chk => {
+    const h = parseInt(chk.dataset.hole);
+    const par = parseInt(chk.dataset.par);
+    if (!chk.checked) return;
+    const v = holes[h];
+    if (v === null || v === '') return;
+    hasVal = true;
+    const doublePar = par * 2;
+    sum += Math.min(Number(v), doublePar);
+  });
+  if (!hasVal) return null;
+  return Math.round(((sum * 1.5) - 72) * 0.8 * 10) / 10; // 小数第1位まで
+}
+
+function updateAllHdcp(allPars) {
+  const activeMembers = members.filter(m => participantSet.has(m.id));
+  activeMembers.forEach(m => {
+    const hdcpEl = document.getElementById(`hdcp-${m.id}`);
+    const netEl = document.getElementById(`net-${m.id}`);
+    if (!hdcpEl) return;
+    const hdcp = calcHdcp(m.id, allPars);
+    hdcpEl.textContent = hdcp !== null ? hdcp : '—';
+    if (netEl) {
+      const totalEl = document.getElementById(`total-${m.id}`);
+      const total = totalEl ? parseFloat(totalEl.textContent) : NaN;
+      netEl.textContent = (hdcp !== null && !isNaN(total) && total > 0)
+        ? Math.round((total - hdcp) * 10) / 10
+        : '—';
+    }
+  });
+}
+
+window.onHdcpCheck = function() {
+  const pars = getParsForCurrentRound();
+  if (!pars) return;
+  const allPars = [...pars.out, ...pars.inn];
+  updateAllHdcp(allPars);
 }
 
 window.onHoleInput = function(inp, par) {
@@ -626,8 +677,13 @@ window.onHoleInput = function(inp, par) {
   const val = inp.value !== '' ? parseInt(inp.value) : null;
   if (!holeScoresLocal[mid]) holeScoresLocal[mid] = Array(18).fill(null);
   holeScoresLocal[mid][hole] = val;
+
+  // 色クラス更新
   inp.className = 'hole-inp';
-  if (val !== null && val > 0) inp.classList.add(getColorClass(val, par));
+  if (val !== null && val > 0) {
+    inp.classList.add(getColorClass(val, par));
+    if (val > par * 2) inp.classList.add('hdcp-capped');
+  }
 
   const cells = [...document.querySelectorAll(`.hole-inp[data-mid="${mid}"]`)];
   const vals = cells.map(c => c.value !== '' ? parseInt(c.value) : 0);
@@ -637,6 +693,20 @@ window.onHoleInput = function(inp, par) {
   if (el(`out-${mid}`)) el(`out-${mid}`).textContent = outTotal || '';
   if (el(`in-${mid}`)) el(`in-${mid}`).textContent = inTotal || '';
   if (el(`total-${mid}`)) el(`total-${mid}`).textContent = (outTotal+inTotal) || '';
+
+  // HDCP・NET更新
+  const pars = getParsForCurrentRound();
+  if (pars) {
+    const allPars2 = [...pars.out, ...pars.inn];
+    updateAllHdcp(allPars2);
+    // 合計スコアパネルのHDCP・NETも更新
+    const hdcp = calcHdcp(mid, allPars2);
+    const totalHdcpEl = document.getElementById(`total-hdcp-${mid}`);
+    const totalNetEl = document.getElementById(`total-net-${mid}`);
+    if (totalHdcpEl) totalHdcpEl.textContent = hdcp !== null ? hdcp : '—';
+    if (totalNetEl && hdcp !== null && (outTotal+inTotal) > 0)
+      totalNetEl.textContent = Math.round(((outTotal+inTotal) - hdcp) * 10) / 10;
+  }
 
   // 合計スコア欄にも反映
   const totalInp = document.querySelector(`#score-body input[type=number][data-mid="${mid}"]`);
@@ -674,11 +744,15 @@ window.renderScoreInputTotal = function() {
     const val = row[m.id] !== undefined && row[m.id] !== null ? row[m.id] : '';
     const checked = participantSet.has(m.id) || val !== '';
     if (checked) participantSet.add(m.id);
+    const hdcpSaved = row[m.id + '_hdcp'] !== undefined ? row[m.id + '_hdcp'] : '';
+    const netSaved = (val !== '' && hdcpSaved !== '') ? Math.round((Number(val) - Number(hdcpSaved)) * 10) / 10 : '';
     return `<tr>
       <td style="font-weight:500;">${m.name}</td>
       <td style="text-align:center;">
         <input type="number" class="score-inp" data-mid="${m.id}" value="${val}" placeholder="—" min="18" max="200" ${checked ? '' : 'disabled style="opacity:0.35;"'} oninput="onTotalScoreInput(this)">
       </td>
+      <td style="text-align:center;font-family:'DM Mono',monospace;color:#6D28D9;font-weight:700;" id="total-hdcp-${m.id}">${hdcpSaved !== '' ? hdcpSaved : '—'}</td>
+      <td style="text-align:center;font-family:'DM Mono',monospace;color:#1D4ED8;font-weight:700;" id="total-net-${m.id}">${netSaved !== '' ? netSaved : '—'}</td>
       <td style="text-align:center;">
         <input type="checkbox" data-mid="${m.id}" ${checked ? 'checked' : ''} onchange="toggleParticipant(this)">
       </td>
@@ -736,7 +810,7 @@ window.saveScores = async function() {
       }
     });
 
-    // ホール別スコアがあれば一緒に保存（合計も上書き）
+    // ホール別スコアがあれば一緒に保存（合計・HDCPも上書き）
     Object.entries(holeScoresLocal).forEach(([mid, holes]) => {
       if (!participantSet.has(mid)) return;
       const hasAny = holes.some(v => v !== null && v !== '');
@@ -744,6 +818,12 @@ window.saveScores = async function() {
         const total = holes.reduce((a,v) => a + (v||0), 0);
         data[mid + '_holes'] = holes;
         if (total > 0) data[mid] = total;
+        // HDCPをFirestoreにも保存
+        const pars = getParsForCurrentRound();
+        if (pars) {
+          const hdcp = calcHdcp(mid, [...pars.out, ...pars.inn]);
+          if (hdcp !== null) data[mid + '_hdcp'] = hdcp;
+        }
       }
     });
 
