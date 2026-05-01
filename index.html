@@ -149,6 +149,9 @@ input:focus, select:focus { border-color: var(--green); box-shadow: 0 0 0 3px rg
 .actions-cell { display: inline-flex; gap: 6px; flex-wrap: wrap; align-items: center; }
 .member-row { cursor: pointer; }
 .member-row.active td { background: #F0FBF4; }
+.status-select { height: 30px; padding: 0 8px; font-size: 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); }
+.status-select.status-done { background: var(--green-pale); color: var(--green); border-color: #86EFAC; font-weight: 700; }
+.status-select.status-planned { background: var(--blue-pale); color: var(--blue); border-color: #93C5FD; font-weight: 700; }
 </style>
 </head>
 <body>
@@ -432,9 +435,14 @@ window.renderSchedule = function() {
   document.getElementById('sched-body').innerHTML = view.length === 0
     ? `<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:24px;">ラウンドがまだありません</td></tr>`
     : view.map((r,i) => {
-        const badge = r.done
-          ? `<span class="badge badge-green">完了</span>`
-          : `<span class="badge badge-blue">予定</span>`;
+        const statusCls = r.done ? 'status-done' : 'status-planned';
+        const statusCtrl = `
+          <select class="status-select ${statusCls}"
+                  onchange="updateRoundStatus('${r.id}', this.value, this)">
+            <option value="planned" ${r.done ? '' : 'selected'}>予定</option>
+            <option value="done" ${r.done ? 'selected' : ''}>完了</option>
+          </select>
+        `;
         const info = [r.startTime ? `開始: ${r.startTime}` : '', r.memo ? `メモ: ${r.memo}` : '']
           .filter(Boolean)
           .join('<br>');
@@ -445,7 +453,7 @@ window.renderSchedule = function() {
           <td style="color:var(--text-sub);">${r.players ? r.players+'名' : '—'}</td>
           <td style="font-size:12px;color:var(--text-muted);max-width:180px;white-space:normal;">${r.fee||'—'}</td>
           <td style="font-size:12px;color:var(--text-sub);max-width:220px;white-space:normal;">${info || '—'}</td>
-          <td>${badge}</td>
+          <td>${statusCtrl}</td>
           <td><div class="actions-cell">
             <button class="btn btn-sm" onclick="editRound('${r.id}')">編集</button>
             <button class="btn btn-sm btn-copy" onclick="copyRoundMessage('${r.id}',${i})">案内文</button>
@@ -518,6 +526,16 @@ window.deleteRound = async function(id, i) {
   if (!confirm(`第${i+1}回を削除しますか？`)) return;
   await deleteDoc(doc(db, 'rounds', id));
   toast('削除しました');
+}
+
+window.updateRoundStatus = async function(id, value, el) {
+  const done = value === 'done';
+  if (el) {
+    el.classList.toggle('status-done', done);
+    el.classList.toggle('status-planned', !done);
+  }
+  await updateDoc(doc(db, 'rounds', id), { done });
+  toast(done ? '状態を「完了」に更新しました' : '状態を「予定」に更新しました');
 }
 
 // ---- Course PAR data (from Excel) ----
