@@ -245,8 +245,7 @@ input:focus, select:focus { border-color: var(--green); box-shadow: 0 0 0 3px rg
       </div>
 
       <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
-        <button class="btn btn-primary" onclick="saveScores()">保存</button>
-        <button class="btn" onclick="markRoundDone()">このラウンドを完了にする</button>
+        <button class="btn btn-primary" onclick="saveScores()">💾 スコアを保存して完了にする</button>
       </div>
     </div>
   </div>
@@ -588,7 +587,11 @@ window.renderHoleScoreTable = function() {
       </tr>
       <tr class="chk-row">
         <td class="name-col" style="font-size:10px;color:var(--text-muted);font-weight:700;">HDCP選択</td>
-        ${allPars.map((p,h)=>`<td><input type="checkbox" class="hole-chk" data-hole="${h}" data-par="${p}" onchange="onHdcpCheck()" checked></td>${h===8?'<td></td>':''}`).join('')}
+        ${allPars.map((p,h) => {
+          const savedChecks = row['hdcp_checks'];
+          const isChecked = savedChecks ? savedChecks[h] !== false : true;
+          return `<td><input type="checkbox" class="hole-chk" data-hole="${h}" data-par="${p}" onchange="onHdcpCheck()" ${isChecked ? 'checked' : ''}></td>${h===8?'<td></td>':''}`;
+        }).join('')}
         <td></td><td></td><td></td><td></td>
       </tr>
     </thead>
@@ -794,6 +797,12 @@ window.saveScores = async function() {
     const data = {};
     const improved = [];
 
+    // チェックボックスの状態を保存（18要素のbool配列）
+    const chks = document.querySelectorAll('.hole-chk');
+    if (chks.length === 18) {
+      data['hdcp_checks'] = [...chks].map(c => c.checked);
+    }
+
     // 合計スコアパネルから値を取得
     document.querySelectorAll('#score-body input[type=number]').forEach(inp => {
       const mid = inp.dataset.mid;
@@ -818,7 +827,6 @@ window.saveScores = async function() {
         const total = holes.reduce((a,v) => a + (v||0), 0);
         data[mid + '_holes'] = holes;
         if (total > 0) data[mid] = total;
-        // HDCPをFirestoreにも保存
         const pars = getParsForCurrentRound();
         if (pars) {
           const hdcp = calcHdcp(mid, [...pars.out, ...pars.inn]);
@@ -828,7 +836,11 @@ window.saveScores = async function() {
     });
 
     await setDoc(doc(db, 'scores', ri), data);
-    toast(improved.length ? `保存完了 / ベスト更新: ${improved.join('、')}` : 'スコアを保存しました ✓');
+
+    // ラウンドを完了にする
+    await updateDoc(doc(db, 'rounds', ri), { done: true });
+
+    toast(improved.length ? `保存完了・ラウンド完了 ✓ ベスト更新: ${improved.join('、')}` : 'スコアを保存しました ✓ ラウンドを完了にしました');
   } catch (e) {
     if (e.message === 'score_range_error') toast('スコアの値を確認してください');
     else { console.error(e); toast('保存に失敗しました'); }
