@@ -606,7 +606,7 @@ window.renderHoleScoreTable = function() {
   const allPars = [...pars.out, ...pars.inn];
   const row = scores[ri] || {};
 
-  // Init local hole scores from saved data or empty
+  // holeScoresLocal を初期化（既存データは絶対に上書きしない）
   activeMembers.forEach(m => {
     if (!holeScoresLocal[m.id]) {
       const saved = row[m.id + '_holes'];
@@ -655,7 +655,8 @@ window.renderHoleScoreTable = function() {
     <tbody>`;
 
   activeMembers.forEach(m => {
-    const holes = holeScoresLocal[m.id] || Array(18).fill(null);
+    // 必ず holeScoresLocal から値を取る（DOMから取らない）
+    const holes = holeScoresLocal[m.id];
     const outTotal = holes.slice(0,9).reduce((a,v)=>a+(v||0),0);
     const inTotal = holes.slice(9,18).reduce((a,v)=>a+(v||0),0);
     const grandTotal = outTotal + inTotal;
@@ -666,11 +667,10 @@ window.renderHoleScoreTable = function() {
     html += `<tr><td class="name-col">${m.name}</td>`;
     for (let h=0; h<18; h++) {
       const par = allPars[h];
-      const val = holes[h] !== null ? holes[h] : '';
-      const cap = val !== '' ? Math.min(Number(val), par * 2) : '';
+      const val = holes[h] !== null && holes[h] !== undefined ? holes[h] : '';
       const isCapped = val !== '' && Number(val) > par * 2;
       const cls = val !== '' ? getColorClass(Number(val), par) : '';
-      html += `<td><input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" class="hole-inp ${cls}${isCapped ? ' hdcp-capped' : ''}" data-mid="${m.id}" data-hole="${h}" value="${val}" oninput="onHoleInput(this,${par})" title="${isCapped ? `ダブルパー上限: ${par*2}` : ''}"></td>`;
+      html += `<td><input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" class="hole-inp ${cls}${isCapped ? ' hdcp-capped' : ''}" data-mid="${m.id}" data-hole="${h}" data-par="${par}" value="${val}" oninput="onHoleInput(this)" title="${isCapped ? `ダブルパー上限: ${par*2}` : ''}"></td>`;
       if (h === 8) html += `<td class="section-total" id="out-${m.id}">${hasAny ? outTotal||'' : ''}</td>`;
     }
     html += `<td class="section-total" id="in-${m.id}">${hasAny ? inTotal||'' : ''}</td>
@@ -728,14 +728,19 @@ window.onHdcpCheck = function() {
   updateAllHdcp(allPars);
 }
 
-window.onHoleInput = function(inp, par) {
+window.onHoleInput = function(inp) {
   // 数字以外を除去
   inp.value = inp.value.replace(/[^0-9]/g, '');
 
   const mid = inp.dataset.mid;
   const hole = parseInt(inp.dataset.hole);
+  const par = parseInt(inp.dataset.par);
   const val = inp.value !== '' ? parseInt(inp.value) : null;
+
+  // holeScoresLocal が未初期化なら作成（安全のため）
   if (!holeScoresLocal[mid]) holeScoresLocal[mid] = Array(18).fill(null);
+
+  // 該当ホールだけ更新（他のホールは絶対に触らない）
   holeScoresLocal[mid][hole] = val;
 
   // 色クラス更新
@@ -745,10 +750,10 @@ window.onHoleInput = function(inp, par) {
     if (val > par * 2) inp.classList.add('hdcp-capped');
   }
 
-  const cells = [...document.querySelectorAll(`.hole-inp[data-mid="${mid}"]`)];
-  const vals = cells.map(c => c.value !== '' ? parseInt(c.value) : 0);
-  const outTotal = vals.slice(0,9).reduce((a,b)=>a+b,0);
-  const inTotal = vals.slice(9,18).reduce((a,b)=>a+b,0);
+  // OUT/IN/TOTAL を holeScoresLocal から計算（DOMではなくデータから）
+  const holes = holeScoresLocal[mid];
+  const outTotal = holes.slice(0,9).reduce((a,v)=>a+(v||0),0);
+  const inTotal = holes.slice(9,18).reduce((a,v)=>a+(v||0),0);
   const el = (id) => document.getElementById(id);
   if (el(`out-${mid}`)) el(`out-${mid}`).textContent = outTotal || '';
   if (el(`in-${mid}`)) el(`in-${mid}`).textContent = inTotal || '';
