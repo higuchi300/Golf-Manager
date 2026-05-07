@@ -201,9 +201,10 @@ input:focus, select:focus { border-color: var(--green); box-shadow: 0 0 0 3px rg
             <option value="びわの平ゴルフ倶楽部">びわの平ゴルフ倶楽部</option>
             <option value="津軽高原ゴルフ場">津軽高原ゴルフ場</option>
             <option value="津軽カントリークラブ">津軽カントリークラブ</option>
-            <option value="青森ロイヤルゴルフ倶楽部">青森ロイヤルゴルフ倶楽部</option>
+            <option value="青森ロイヤルゴルフクラブ">青森ロイヤルゴルフクラブ</option>
             <option value="夏泊ゴルフリンクス">夏泊ゴルフリンクス</option>
             <option value="秋田北空港クラシックゴルフ倶楽部">秋田北空港クラシックゴルフ倶楽部</option>
+            <option value="青森カントリークラブ">青森カントリークラブ</option>
           </select>
         </div>
         <div class="form-field"><label>プレー代</label><input type="text" id="new-fee" placeholder="例: 12,000円（昼食付）" style="width:180px;"></div>
@@ -224,6 +225,28 @@ input:focus, select:focus { border-color: var(--green); box-shadow: 0 0 0 3px rg
           <select id="score-round" onchange="renderScoreInput()" style="width:280px;"></select>
         </div>
         <div class="saving" id="saving-ind"><div class="spinner"></div>保存中...</div>
+      </div>
+
+      <div id="course-selector-container" style="display:none;margin-bottom:16px;padding:12px;background:#F0FBF4;border-radius:8px;border:1px solid #D1FAE5;">
+        <div style="font-size:12px;font-weight:700;color:var(--green);margin-bottom:8px;">青森カントリークラブ — コース選択</div>
+        <div style="display:flex;gap:16px;flex-wrap:wrap;">
+          <div class="form-field" style="margin:0;">
+            <label style="font-size:11px;">コース1</label>
+            <select id="aomori-course-1" onchange="onCourseSelectionChanged()" style="width:140px;">
+              <option value="むつ湾">むつ湾</option>
+              <option value="八甲田">八甲田</option>
+              <option value="十和田">十和田</option>
+            </select>
+          </div>
+          <div class="form-field" style="margin:0;">
+            <label style="font-size:11px;">コース2</label>
+            <select id="aomori-course-2" onchange="onCourseSelectionChanged()" style="width:140px;">
+              <option value="むつ湾">むつ湾</option>
+              <option value="八甲田" selected>八甲田</option>
+              <option value="十和田">十和田</option>
+            </select>
+          </div>
+        </div>
       </div>
 
       <div class="score-mode-toggle">
@@ -424,7 +447,7 @@ function getRoundsSortedByDate() {
 function renderAll() {
   const activeTab = document.querySelector('.panel.active')?.id;
   if (activeTab === 'schedule' || !activeTab) renderSchedule();
-  if (activeTab === 'score') { populateRoundSelect(); }
+  if (activeTab === 'score') { populateRoundSelect(scoreDirty); }
   if (activeTab === 'ranking') renderRanking();
   if (activeTab === 'members') renderMembers();
 }
@@ -543,15 +566,25 @@ const COURSE_PARS = {
   'びわの平ゴルフ倶楽部':    { out:[5,4,5,4,4,3,4,3,4], inn:[4,5,4,3,4,3,4,5,4] },
   '津軽高原ゴルフ場':        { out:[5,3,4,3,4,5,4,4,4], inn:[4,3,4,5,3,4,4,4,5] },
   '津軽カントリークラブ':    { out:[5,4,4,4,5,3,4,3,4], inn:[5,3,4,4,4,3,4,5,4] },
-  '青森ロイヤルゴルフ倶楽部':{ out:[5,4,3,4,4,3,5,4,4], inn:[4,4,3,4,4,5,4,3,5] },
+  '青森ロイヤルゴルフクラブ':{ out:[5,4,3,4,4,3,5,4,4], inn:[4,4,3,4,4,5,4,3,5] },
   '夏泊ゴルフリンクス':      { out:[5,3,4,4,5,4,3,4,4], inn:[4,4,3,4,5,4,5,3,4] },
   '秋田北空港クラシックゴルフ倶楽部': { out:[4,4,3,5,3,4,4,4,5], inn:[5,4,4,3,4,5,4,3,4] },
+  '青森カントリークラブ': {
+    type: 'course-selection',
+    courses: {
+      'むつ湾': [4,5,3,4,4,5,4,3,4],
+      '八甲田': [5,4,3,4,4,4,4,3,5],
+      '十和田': [5,4,5,3,4,4,3,4,4]
+    }
+  },
 };
 
 let scoreMode = 'total'; // 'total' or 'hole'  ← デフォルトを合計に変更
+let courseSelectionAomori = { course1: 'むつ湾', course2: '八甲田' }; // 青森カントリークラブのコース選択
 // holeScores[memberId][hole1..18] stored locally until save
 let holeScoresLocal = {}; // { memberId: [18 values or null] }
 let selectedMemberId = null;
+let scoreDirty = false; // 未保存の入力変更があるか
 
 // 参加チェック済みメンバーIDセット
 let participantSet = new Set();
@@ -583,7 +616,20 @@ function getParsForCurrentRound() {
   const ri = document.getElementById('score-round').value;
   const rnd = rounds.find(r=>r.id===ri);
   if (!rnd) return null;
-  return COURSE_PARS[rnd.course] || null;
+  const courseDef = COURSE_PARS[rnd.course] || null;
+  if (!courseDef) return null;
+  
+  // 青森カントリークラブの場合はコース選択に応じたPARを返す
+  if (courseDef.type === 'course-selection') {
+    const c1Pars = courseDef.courses[courseSelectionAomori.course1];
+    const c2Pars = courseDef.courses[courseSelectionAomori.course2];
+    if (c1Pars && c2Pars) {
+      return { out: c1Pars, inn: c2Pars }; // out/inn形式で返す
+    }
+    return null;
+  }
+  
+  return courseDef;
 }
 
 window.renderHoleScoreTable = function() {
@@ -618,14 +664,19 @@ window.renderHoleScoreTable = function() {
   const inPar = pars.inn.reduce((a,b)=>a+b,0);
   const totalPar = outPar + inPar;
 
+  // 青森カントリークラブの場合はコース名を使う
+  const rnd = rounds.find(r => r.id === ri);
+  const outLabel = (rnd && rnd.course === '青森カントリークラブ') ? courseSelectionAomori.course1 : 'OUT';
+  const inLabel = (rnd && rnd.course === '青森カントリークラブ') ? courseSelectionAomori.course2 : 'IN';
+
   let html = `<div class="hole-score-wrap"><table class="hole-tbl">
     <thead>
       <tr>
         <th class="name-col" rowspan="3">名前</th>
-        <th colspan="9" style="background:var(--green);">OUT</th>
-        <th style="background:#1a4d38;font-size:10px;" rowspan="2">OUT計</th>
-        <th colspan="9" style="background:#1a4d38;">IN</th>
-        <th style="background:#1a4d38;font-size:10px;" rowspan="2">IN計</th>
+        <th colspan="9" style="background:var(--green);">${outLabel}</th>
+        <th style="background:#1a4d38;font-size:10px;" rowspan="2">${outLabel}計</th>
+        <th colspan="9" style="background:#1a4d38;">${inLabel}</th>
+        <th style="background:#1a4d38;font-size:10px;" rowspan="2">${inLabel}計</th>
         <th style="background:#1a4d38;font-size:10px;" rowspan="2">TOTAL</th>
         <th style="background:#5B21B6;font-size:10px;" rowspan="2">HDCP</th>
         <th style="background:#0F4C81;font-size:10px;" rowspan="2">NET</th>
@@ -722,13 +773,29 @@ function updateAllHdcp(allPars) {
 }
 
 window.onHdcpCheck = function() {
+  scoreDirty = true;
   const pars = getParsForCurrentRound();
   if (!pars) return;
   const allPars = [...pars.out, ...pars.inn];
   updateAllHdcp(allPars);
 }
 
+window.onCourseSelectionChanged = function() {
+  scoreDirty = true;
+  const c1 = document.getElementById('aomori-course-1').value;
+  const c2 = document.getElementById('aomori-course-2').value;
+  if (c1 === c2) {
+    toast('同じコースは選択できません');
+    document.getElementById('aomori-course-2').value = courseSelectionAomori.course2;
+    return;
+  }
+  courseSelectionAomori = { course1: c1, course2: c2 };
+  // ホール別表を再描画
+  if (scoreMode === 'hole') renderHoleScoreTable();
+}
+
 window.onHoleInput = function(inp) {
+  scoreDirty = true;
   // 数字以外を除去
   inp.value = inp.value.replace(/[^0-9]/g, '');
 
@@ -779,26 +846,44 @@ window.onHoleInput = function(inp) {
 }
 
 // ---- Score ----
-window.populateRoundSelect = function() {
+window.populateRoundSelect = function(preserveLocalState = false) {
   const sel = document.getElementById('score-round');
   const prev = sel.value;
   const view = getRoundsSortedByDate();
   sel.innerHTML = view.map((r,i) => `<option value="${r.id}">第${i+1}回 — ${fmtDate(r.date)} ${r.course}</option>`).join('');
   if (prev && rounds.find(r=>r.id===prev)) sel.value = prev;
-  holeScoresLocal = {};
-  participantSet = new Set();
-  renderScoreInput();
+  const selectionChanged = sel.value !== prev;
+  if (!preserveLocalState || selectionChanged) {
+    holeScoresLocal = {};
+    participantSet = new Set();
+    scoreDirty = false;
+  }
+  renderScoreInput(preserveLocalState && !selectionChanged);
 }
 
-window.renderScoreInput = function() {
-  holeScoresLocal = {};
-  participantSet = new Set();
+window.renderScoreInput = function(preserveLocalState = false) {
+  if (!preserveLocalState) {
+    holeScoresLocal = {};
+    participantSet = new Set();
+    scoreDirty = false;
+  }
   // 保存済み参加者を復元
   const ri = document.getElementById('score-round').value;
   const row = scores[ri] || {};
-  members.forEach(m => {
-    if (row[m.id] !== undefined && row[m.id] !== null) participantSet.add(m.id);
-  });
+  if (!preserveLocalState) {
+    members.forEach(m => {
+      if (row[m.id] !== undefined && row[m.id] !== null) participantSet.add(m.id);
+    });
+  }
+  
+  // 青森カントリークラブの場合はコース選択UI を表示
+  const rnd = rounds.find(r => r.id === ri);
+  const isAomori = rnd && rnd.course === '青森カントリークラブ';
+  const courseSelectorContainer = document.getElementById('course-selector-container');
+  if (courseSelectorContainer) {
+    courseSelectorContainer.style.display = isAomori ? 'block' : 'none';
+  }
+  
   if (scoreMode === 'total') renderScoreInputTotal();
   else renderHoleScoreTable();
 }
@@ -827,6 +912,7 @@ window.renderScoreInputTotal = function() {
 }
 
 window.toggleParticipant = function(cb) {
+  scoreDirty = true;
   const mid = cb.dataset.mid;
   const inp = document.querySelector(`#score-body input[type=number][data-mid="${mid}"]`);
   if (cb.checked) {
@@ -842,6 +928,7 @@ window.toggleParticipant = function(cb) {
 }
 
 window.onTotalScoreInput = function(inp) {
+  scoreDirty = true;
   const mid = inp.dataset.mid;
   const cb = document.querySelector(`#score-body input[type=checkbox][data-mid="${mid}"]`);
   if (inp.value !== '' && cb && !cb.checked) {
@@ -902,6 +989,7 @@ window.saveScores = async function() {
 
     // ラウンドを完了にする
     await updateDoc(doc(db, 'rounds', ri), { done: true });
+    scoreDirty = false;
 
     toast(improved.length ? `保存完了・ラウンド完了 ✓ ベスト更新: ${improved.join('、')}` : 'スコアを保存しました ✓ ラウンドを完了にしました');
   } catch (e) {
