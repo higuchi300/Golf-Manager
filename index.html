@@ -278,12 +278,13 @@ input:focus, select:focus { border-color: var(--green); box-shadow: 0 0 0 3px rg
 
       <!-- ① 合計スコア入力（先） -->
       <div id="score-panel-total">
-        <div class="card-title">参加メンバーにチェックを入れ、合計スコアを入力してください</div>
+        <div class="card-title">参加メンバーのスコアを入力してください</div>
         <div class="tbl-wrap">
 
-          <table><thead><tr><th>名前</th><th style="text-align:center;">合計スコア</th><th style="text-align:center;">HDCP</th><th style="text-align:center;">NET</th><th style="text-align:center;">参加</th></tr></thead>
+          <table><thead><tr><th>名前</th><th style="text-align:center;">合計スコア</th><th style="text-align:center;">HDCP</th><th style="text-align:center;">NET</th><th></th></tr></thead>
           <tbody id="score-body"></tbody></table>
         </div>
+        <div id="score-add-members-wrap" style="margin-top:10px;"></div>
       </div>
 
       <!-- ② ホール別入力（後） -->
@@ -363,6 +364,16 @@ input:focus, select:focus { border-color: var(--green); box-shadow: 0 0 0 3px rg
       <button class="btn btn-sm" onclick="closeRoundDetail(event)">閉じる</button>
     </div>
     <div class="modal-body" id="round-modal-body"></div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="round-edit-modal" onclick="closeRoundEdit(event)">
+  <div class="modal-card" onclick="event.stopPropagation()" style="max-width:520px;">
+    <div class="modal-head">
+      <div class="modal-title" id="round-edit-title">ラウンド編集</div>
+      <button class="btn btn-sm" onclick="closeRoundEdit(event)">閉じる</button>
+    </div>
+    <div class="modal-body" id="round-edit-body"></div>
   </div>
 </div>
 
@@ -658,27 +669,86 @@ window.addRound = async function() {
   toast('ラウンドを追加しました');
 }
 
-window.editRound = async function(id) {
+window.editRound = function(id) {
   const r = rounds.find(x => x.id === id);
   if (!r) return;
-  const date = prompt('日付 (YYYY-MM-DD)', r.date || '');
-  if (date === null) return;
-  const course = prompt('コース名', r.course || '');
-  if (course === null || !course.trim()) return;
-  const fee = prompt('プレー代', r.fee || '未定');
-  if (fee === null) return;
-  const startTime = prompt('スタート情報', r.startTime || '');
-  if (startTime === null) return;
-  const memo = prompt('メモ', r.memo || '');
-  if (memo === null) return;
+  const sortedRounds = getRoundsSortedByDate();
+  const idx = sortedRounds.findIndex(x => x.id === id);
+  const currentParticipants = getRoundParticipants(r);
+  const courseOptions = [
+    'びわの平ゴルフ倶楽部','津軽高原ゴルフ場','津軽カントリークラブ',
+    '青森ロイヤルゴルフクラブ','夏泊ゴルフリンクス',
+    '秋田北空港クラシックゴルフ倶楽部','青森カントリークラブ'
+  ];
+  document.getElementById('round-edit-title').textContent = `第${idx + 1}回 編集`;
+  document.getElementById('round-edit-body').innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="form-field">
+        <label>日付</label>
+        <input type="date" id="edit-date" value="${escapeHtml(r.date||'')}" style="width:180px;">
+      </div>
+      <div class="form-field">
+        <label>コース名</label>
+        <select id="edit-course" style="width:220px;">
+          ${courseOptions.map(c => `<option value="${c}"${r.course===c?' selected':''}>${c}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-field">
+        <label>プレー代</label>
+        <input type="text" id="edit-fee" value="${escapeHtml(r.fee||'')}" placeholder="例: 12,000円" style="width:200px;">
+      </div>
+      <div class="form-field">
+        <label>スタート</label>
+        <input type="text" id="edit-start" value="${escapeHtml(r.startTime||'')}" placeholder="例: 8:00 OUT" style="width:180px;">
+      </div>
+      <div class="form-field">
+        <label>メモ</label>
+        <input type="text" id="edit-memo" value="${escapeHtml(r.memo||'')}" placeholder="持ち物・注意事項など" style="width:280px;">
+      </div>
+      <div class="form-field" style="flex-direction:column;align-items:flex-start;">
+        <label>参加メンバー</label>
+        <div class="participant-list" style="margin-top:6px;">
+          ${members.length
+            ? members.map(m => `
+              <label class="participant-item">
+                <input type="checkbox" value="${m.id}"${currentParticipants.includes(m.name) ? ' checked' : ''}>
+                <span>${escapeHtml(m.name)}</span>
+              </label>`).join('')
+            : '<span class="muted">メンバーがまだいません</span>'}
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:4px;">
+        <button class="btn btn-primary" onclick="saveRoundEdit('${id}')">保存</button>
+        <button class="btn btn-sm" onclick="closeRoundEdit()">キャンセル</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('round-edit-modal').classList.add('show');
+}
+
+window.saveRoundEdit = async function(id) {
+  const date = document.getElementById('edit-date').value.trim();
+  const course = document.getElementById('edit-course').value.trim();
+  const fee = document.getElementById('edit-fee').value.trim();
+  const startTime = document.getElementById('edit-start').value.trim();
+  const memo = document.getElementById('edit-memo').value.trim();
+  if (!date || !course) { toast('日付とコース名は必須です'); return; }
+  const pickedIds = [...document.querySelectorAll('#round-edit-body input[type=checkbox]:checked')].map(el => el.value);
+  const participants = pickedIds.map(pid => members.find(m => m.id === pid)?.name).filter(Boolean);
   await updateDoc(doc(db, 'rounds', id), {
-    date: date.trim(),
-    course: course.trim(),
-    fee: fee.trim() || '未定',
-    startTime: startTime.trim(),
-    memo: memo.trim()
+    date, course,
+    fee: fee || '未定',
+    startTime, memo,
+    participants,
+    players: participants.length || null
   });
+  closeRoundEdit();
   toast('ラウンド情報を更新しました');
+}
+
+window.closeRoundEdit = function(ev) {
+  if (ev) ev.stopPropagation();
+  document.getElementById('round-edit-modal').classList.remove('show');
 }
 
 window.copyRoundMessage = async function(id, i) {
@@ -1018,12 +1088,15 @@ window.renderScoreInput = function(preserveLocalState = false) {
     participantSet = new Set();
     scoreDirty = false;
   }
-  // 保存済み参加者を復元
+  // 保存済み参加者 + ラウンド設定済み参加者を復元
   const ri = document.getElementById('score-round').value;
   const row = scores[ri] || {};
   if (!preserveLocalState) {
+    const rnd2 = rounds.find(r => r.id === ri);
+    const roundParticipantNames = new Set(Array.isArray(rnd2?.participants) ? rnd2.participants : []);
     members.forEach(m => {
       if (row[m.id] !== undefined && row[m.id] !== null) participantSet.add(m.id);
+      if (roundParticipantNames.has(m.name)) participantSet.add(m.id);
     });
   }
   
@@ -1042,24 +1115,55 @@ window.renderScoreInput = function(preserveLocalState = false) {
 window.renderScoreInputTotal = function() {
   const ri = document.getElementById('score-round').value;
   const row = scores[ri] || {};
-  document.getElementById('score-body').innerHTML = members.map(m => {
-    const val = row[m.id] !== undefined && row[m.id] !== null ? row[m.id] : '';
-    const checked = participantSet.has(m.id) || val !== '';
-    if (checked) participantSet.add(m.id);
-    const hdcpSaved = row[m.id + '_hdcp'] !== undefined ? row[m.id + '_hdcp'] : '';
-    const netSaved = (val !== '' && hdcpSaved !== '') ? Math.round((Number(val) - Number(hdcpSaved)) * 10) / 10 : '';
-    return `<tr>
-      <td style="font-weight:500;">${m.name}</td>
-      <td style="text-align:center;">
-        <input type="number" class="score-inp" data-mid="${m.id}" value="${val}" placeholder="—" min="18" max="200" ${checked ? '' : 'disabled style="opacity:0.35;"'} oninput="onTotalScoreInput(this)">
-      </td>
-      <td style="text-align:center;font-family:'DM Mono',monospace;color:#6D28D9;font-weight:700;" id="total-hdcp-${m.id}">${hdcpSaved !== '' ? hdcpSaved : '—'}</td>
-      <td style="text-align:center;font-family:'DM Mono',monospace;color:#1D4ED8;font-weight:700;" id="total-net-${m.id}">${netSaved !== '' ? netSaved : '—'}</td>
-      <td style="text-align:center;">
-        <input type="checkbox" data-mid="${m.id}" ${checked ? 'checked' : ''} onchange="toggleParticipant(this)">
-      </td>
-    </tr>`;
-  }).join('');
+  const activeMembers = members.filter(m => participantSet.has(m.id));
+  const inactiveMembers = members.filter(m => !participantSet.has(m.id));
+
+  document.getElementById('score-body').innerHTML = activeMembers.length
+    ? activeMembers.map(m => {
+        const val = row[m.id] !== undefined && row[m.id] !== null ? row[m.id] : '';
+        const hdcpSaved = row[m.id + '_hdcp'] !== undefined ? row[m.id + '_hdcp'] : '';
+        const netSaved = (val !== '' && hdcpSaved !== '') ? Math.round((Number(val) - Number(hdcpSaved)) * 10) / 10 : '';
+        return `<tr>
+          <td style="font-weight:500;">${escapeHtml(m.name)}</td>
+          <td style="text-align:center;">
+            <input type="number" class="score-inp" data-mid="${m.id}" value="${val}" placeholder="—" min="18" max="200" oninput="onTotalScoreInput(this)">
+          </td>
+          <td style="text-align:center;font-family:'DM Mono',monospace;color:#6D28D9;font-weight:700;" id="total-hdcp-${m.id}">${hdcpSaved !== '' ? hdcpSaved : '—'}</td>
+          <td style="text-align:center;font-family:'DM Mono',monospace;color:#1D4ED8;font-weight:700;" id="total-net-${m.id}">${netSaved !== '' ? netSaved : '—'}</td>
+          <td style="text-align:center;">
+            <button class="btn btn-sm btn-danger" style="padding:2px 8px;font-size:12px;line-height:1;" onclick="removeParticipant('${m.id}')">&#x00D7;</button>
+          </td>
+        </tr>`;
+      }).join('')
+    : `<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:16px;">参加メンバーがいません</td></tr>`;
+
+  const addWrap = document.getElementById('score-add-members-wrap');
+  if (addWrap) {
+    if (inactiveMembers.length) {
+      addWrap.innerHTML =
+        `<div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em;">メンバーを追加</div>` +
+        inactiveMembers.map(m =>
+          `<button class="btn btn-sm" style="margin:2px;" onclick="addParticipantFromScore('${m.id}')">&#xFF0B; ${escapeHtml(m.name)}</button>`
+        ).join('');
+    } else {
+      addWrap.innerHTML = '';
+    }
+  }
+}
+
+window.addParticipantFromScore = function(mid) {
+  scoreDirty = true;
+  participantSet.add(mid);
+  renderScoreInputTotal();
+  if (scoreMode === 'hole') renderHoleScoreTable();
+}
+
+window.removeParticipant = function(mid) {
+  scoreDirty = true;
+  participantSet.delete(mid);
+  holeScoresLocal[mid] = Array(18).fill(null);
+  renderScoreInputTotal();
+  if (scoreMode === 'hole') renderHoleScoreTable();
 }
 
 window.toggleParticipant = function(cb) {
@@ -1080,13 +1184,6 @@ window.toggleParticipant = function(cb) {
 
 window.onTotalScoreInput = function(inp) {
   scoreDirty = true;
-  const mid = inp.dataset.mid;
-  const cb = document.querySelector(`#score-body input[type=checkbox][data-mid="${mid}"]`);
-  if (inp.value !== '' && cb && !cb.checked) {
-    cb.checked = true;
-    participantSet.add(mid);
-    inp.disabled = false; inp.style.opacity = '1';
-  }
 }
 
 window.saveScores = async function() {
