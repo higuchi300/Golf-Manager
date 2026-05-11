@@ -152,6 +152,23 @@ input:focus, select:focus { border-color: var(--green); box-shadow: 0 0 0 3px rg
 .status-select { height: 30px; padding: 0 8px; font-size: 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); }
 .status-select.status-done { background: var(--green-pale); color: var(--green); border-color: #86EFAC; font-weight: 700; }
 .status-select.status-planned { background: var(--blue-pale); color: var(--blue); border-color: #93C5FD; font-weight: 700; }
+.footer { text-align: center; color: var(--text-muted); font-size: 12px; padding: 20px 12px 28px; }
+.participant-list { margin-top: 10px; max-height: 170px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; background: #FAFAF8; }
+.participant-item { display: flex; align-items: center; gap: 8px; margin: 4px 0; font-size: 13px; }
+.participant-item input { width: 16px; height: 16px; }
+.participant-chip-wrap { margin-top: 6px; display: flex; gap: 6px; flex-wrap: wrap; }
+.participant-chip { font-size: 11px; padding: 2px 8px; border-radius: 999px; background: #ECFDF5; color: #065F46; border: 1px solid #A7F3D0; }
+.link-btn { border: none; background: none; color: var(--blue); cursor: pointer; font-size: 12px; padding: 0; text-decoration: underline; }
+.modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: none; align-items: center; justify-content: center; z-index: 2000; padding: 16px; }
+.modal-backdrop.show { display: flex; }
+.modal-card { width: min(680px, 96vw); max-height: 88vh; overflow-y: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); }
+.modal-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--border); }
+.modal-title { font-size: 14px; font-weight: 700; }
+.modal-body { padding: 16px; }
+.kv { display: grid; grid-template-columns: 130px 1fr; gap: 8px 12px; margin-bottom: 12px; }
+.kv-k { color: var(--text-muted); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+.kv-v { color: var(--text); }
+.mono-list { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px; }
 </style>
 </head>
 <body>
@@ -163,7 +180,7 @@ input:focus, select:focus { border-color: var(--green); box-shadow: 0 0 0 3px rg
   </div>
   <div class="header-status">
     <div class="status-dot"></div>
-    <span id="sync-status">同期中...</span>
+    <span id="sync-status">Now Loading...</span>
   </div>
 </div>
 
@@ -295,14 +312,13 @@ input:focus, select:focus { border-color: var(--green); box-shadow: 0 0 0 3px rg
             <select id="rank-sort" onchange="renderRanking()" style="width:160px;">
               <option value="avg">平均スコア順</option>
               <option value="best">ベストスコア順</option>
-              <option value="rounds">ラウンド数順</option>
             </select>
           </div>
         </div>
       </div>
       <div class="muted" id="rank-note" style="margin-bottom:10px;"></div>
       <div class="tbl-wrap">
-        <table><thead><tr><th>順位</th><th>名前</th><th>参加</th><th>平均スコア</th><th>ベスト</th><th>ワースト</th></tr></thead>
+        <table><thead><tr id="rank-head"><th>順位</th><th>名前</th><th>参加</th><th>平均スコア</th><th>ベスト</th><th>ワースト</th></tr></thead>
         <tbody id="rank-body"><tr><td colspan="6"><div class="loading"><div class="spinner"></div>読み込み中...</div></td></tr></tbody></table>
       </div>
     </div>
@@ -333,7 +349,19 @@ input:focus, select:focus { border-color: var(--green); box-shadow: 0 0 0 3px rg
 
 </div>
 
+<div class="footer">Created and developed by higuchi</div>
+
 <div class="toast" id="toast"></div>
+
+<div class="modal-backdrop" id="round-detail-modal" onclick="closeRoundDetail(event)">
+  <div class="modal-card" onclick="event.stopPropagation()">
+    <div class="modal-head">
+      <div class="modal-title" id="round-modal-title">ラウンド詳細</div>
+      <button class="btn btn-sm" onclick="closeRoundDetail(event)">閉じる</button>
+    </div>
+    <div class="modal-body" id="round-modal-body"></div>
+  </div>
+</div>
 
 <!-- Firebase SDKs -->
 <script type="module">
@@ -357,6 +385,7 @@ const db = getFirestore(app);
 let members = [];
 let rounds = [];
 let scores = {}; // { roundId: { memberId: score } }
+let scheduleParticipantsExpanded = {}; // { roundId: boolean }
 
 // ---- Firestore listeners ----
 onSnapshot(collection(db, 'members'), snap => {
@@ -452,6 +481,40 @@ function renderAll() {
   if (activeTab === 'members') renderMembers();
 }
 
+function escapeHtml(v) {
+  return String(v ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function normalizeNames(arr) {
+  const seen = new Set();
+  return (arr || [])
+    .map(v => String(v || '').trim())
+    .filter(Boolean)
+    .filter(v => {
+      const key = v.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+}
+
+function getRoundParticipants(r) {
+  const manual = Array.isArray(r.participants) ? r.participants : [];
+  const fromScores = [];
+  const row = scores[r.id] || {};
+  members.forEach(m => {
+    if (row[m.id] !== undefined && row[m.id] !== null) fromScores.push(m.name);
+  });
+  return normalizeNames([...manual, ...fromScores]);
+}
+
+
+
 // ---- Schedule ----
 window.renderSchedule = function() {
   const view = getRoundsSortedByDate();
@@ -469,11 +532,21 @@ window.renderSchedule = function() {
         const info = [r.startTime ? `開始: ${r.startTime}` : '', r.memo ? `メモ: ${r.memo}` : '']
           .filter(Boolean)
           .join('<br>');
+        const names = getRoundParticipants(r);
+        const expanded = !!scheduleParticipantsExpanded[r.id];
+        const shownNames = expanded ? names : names.slice(0, 3);
+        const chips = shownNames.map(n => `<span class="participant-chip">${escapeHtml(n)}</span>`).join('');
+        const moreBtn = names.length > 3
+          ? `<button class="link-btn" onclick="toggleRoundParticipants('${r.id}', event)">${expanded ? '閉じる' : `他${names.length - 3}名`}</button>`
+          : '';
+        const participantsCell = names.length
+          ? `${names.length}名<div class="participant-chip-wrap">${chips}</div>${moreBtn}`
+          : (r.players ? `${r.players}名` : '—');
         return `<tr>
-          <td style="color:var(--text-muted);font-family:'DM Mono',monospace;font-size:12px;">第${i+1}回</td>
-          <td style="font-weight:500;">${fmtDate(r.date)||''}</td>
-          <td>${r.course||''}</td>
-          <td style="color:var(--text-sub);">${r.players ? r.players+'名' : '—'}</td>
+          <td style="color:var(--text-muted);font-family:'DM Mono',monospace;font-size:12px;cursor:pointer;" onclick="openRoundDetail('${r.id}', ${i}, event)">第${i+1}回</td>
+          <td style="font-weight:500;cursor:pointer;" onclick="openRoundDetail('${r.id}', ${i}, event)">${fmtDate(r.date)||''}</td>
+          <td style="cursor:pointer;" onclick="openRoundDetail('${r.id}', ${i}, event)">${r.course||''}</td>
+          <td style="color:var(--text-sub);cursor:pointer;" onclick="openRoundDetail('${r.id}', ${i}, event)">${participantsCell}</td>
           <td style="font-size:12px;color:var(--text-muted);max-width:180px;white-space:normal;">${r.fee||'—'}</td>
           <td style="font-size:12px;color:var(--text-sub);max-width:220px;white-space:normal;">${info || '—'}</td>
           <td>${statusCtrl}</td>
@@ -486,6 +559,45 @@ window.renderSchedule = function() {
       }).join('');
 }
 
+window.toggleRoundParticipants = function(roundId, ev) {
+  if (ev) { ev.stopPropagation(); }
+  scheduleParticipantsExpanded[roundId] = !scheduleParticipantsExpanded[roundId];
+  renderSchedule();
+}
+
+window.openRoundDetail = function(id, idx, ev) {
+  if (ev) ev.stopPropagation();
+  const r = rounds.find(x => x.id === id);
+  if (!r) return;
+  const names = getRoundParticipants(r);
+  const modal = document.getElementById('round-detail-modal');
+  const title = document.getElementById('round-modal-title');
+  const body = document.getElementById('round-modal-body');
+  title.textContent = `第${idx + 1}回 ラウンド詳細`;
+  body.innerHTML = `
+    <div class="kv">
+      <div class="kv-k">日付</div><div class="kv-v">${escapeHtml(fmtDate(r.date) || '—')}</div>
+      <div class="kv-k">コース</div><div class="kv-v">${escapeHtml(r.course || '—')}</div>
+      <div class="kv-k">人数</div><div class="kv-v">${names.length ? `${names.length}名` : (r.players ? `${r.players}名` : '—')}</div>
+      <div class="kv-k">プレー代</div><div class="kv-v">${escapeHtml(r.fee || '—')}</div>
+      <div class="kv-k">スタート時間</div><div class="kv-v">${escapeHtml(r.startTime || '—')}</div>
+      <div class="kv-k">メモ</div><div class="kv-v">${escapeHtml(r.memo || '—')}</div>
+      <div class="kv-k">状態</div><div class="kv-v">${r.done ? '<span class="badge badge-green">完了</span>' : '<span class="badge badge-blue">予定</span>'}</div>
+    </div>
+    <div class="card-title" style="margin-top:4px;">参加メンバー一覧</div>
+    <div class="mono-list">
+      ${names.length ? names.map(n => `<span class="participant-chip">${escapeHtml(n)}</span>`).join('') : '<span class="muted">参加者未設定</span>'}
+    </div>
+  `;
+  modal.classList.add('show');
+}
+
+window.closeRoundDetail = function(ev) {
+  if (ev) ev.stopPropagation();
+  const modal = document.getElementById('round-detail-modal');
+  modal.classList.remove('show');
+}
+
 window.addRound = async function() {
   const date = document.getElementById('new-date').value.trim();
   const course = document.getElementById('new-course').value.trim();
@@ -496,8 +608,18 @@ window.addRound = async function() {
   const players = rawPlayers !== '' ? parseInt(rawPlayers) : null;
   if (!date || !course) { toast('日付とコース名は必須です'); return; }
   if (players !== null && (isNaN(players) || players < 1 || players > 30)) { toast('人数は1〜30で入力してください'); return; }
+  
   const id = 'round_' + Date.now();
-  await setDoc(doc(db, 'rounds', id), { date, course, fee: fee||'未定', startTime, memo, players, done: false, order: rounds.length });
+  await setDoc(doc(db, 'rounds', id), {
+    date,
+    course,
+    fee: fee||'未定',
+    startTime,
+    memo,
+    players: players,
+    done: false,
+    order: rounds.length
+  });
   document.getElementById('new-date').value = '';
   document.getElementById('new-course').value = '';
   document.getElementById('new-fee').value = '';
@@ -1013,28 +1135,67 @@ window.markRoundDone = async function() {
 window.renderRanking = function() {
   const sort = document.getElementById('rank-sort').value;
   const mode = document.getElementById('rank-mode').value;
+  const showAvgHdcp = mode === 'net';
+  const head = document.getElementById('rank-head');
+  if (head) {
+    head.innerHTML = showAvgHdcp
+      ? '<th>順位</th><th>名前</th><th>参加</th><th>平均スコア</th><th>平均HDCP</th><th>ベスト</th><th>ワースト</th>'
+      : '<th>順位</th><th>名前</th><th>参加</th><th>平均スコア</th><th>ベスト</th><th>ワースト</th>';
+  }
   const stats = members.map(m => {
-    const s = getStats(m.id);
-    const hdcp = Number(m.handicap || 0);
-    if (mode === 'net' && s.rounds > 0) {
-      return { name: m.name, rounds: s.rounds, avg: Math.round((s.avg - hdcp) * 10) / 10, best: s.best - hdcp, worst: s.worst - hdcp };
+    if (mode === 'net') {
+      const netRows = Object.values(scores)
+        .map(row => {
+          const gross = row[m.id];
+          const hdcp = row[m.id + '_hdcp'];
+          if (gross === null || gross === undefined || isNaN(gross)) return null;
+          if (hdcp === null || hdcp === undefined || isNaN(hdcp)) return null;
+          return {
+            net: Math.round((Number(gross) - Number(hdcp)) * 10) / 10,
+            hdcp: Number(hdcp)
+          };
+        })
+        .filter(v => v !== null);
+
+      if (!netRows.length) {
+        return { name: m.name, rounds: 0, avg: null, avgHdcp: null, best: null, worst: null };
+      }
+
+      const netScores = netRows.map(x => x.net);
+      const avgHdcp = Math.round((netRows.reduce((a,b)=>a+b.hdcp,0) / netRows.length) * 10) / 10;
+
+      return {
+        name: m.name,
+        rounds: netRows.length,
+        avg: Math.round((netScores.reduce((a,b)=>a+b,0) / netScores.length) * 10) / 10,
+        avgHdcp,
+        best: Math.min(...netScores),
+        worst: Math.max(...netScores)
+      };
     }
-    return { name: m.name, rounds: s.rounds, avg: s.avg, best: s.best, worst: s.worst };
+
+    const s = getStats(m.id);
+    return { name: m.name, rounds: s.rounds, avg: s.avg, avgHdcp: null, best: s.best, worst: s.worst };
   }).filter(m=>m.rounds>0);
-  stats.sort((a,b) => sort==='avg' ? a.avg-b.avg : sort==='best' ? a.best-b.best : b.rounds-a.rounds);
-  document.getElementById('rank-note').textContent = mode === 'net' ? 'ネット順位: 各メンバーのハンデを差し引いたスコアで表示' : 'グロス順位: 入力スコアをそのまま表示';
+  stats.sort((a,b) => sort==='avg' ? a.avg-b.avg : a.best-b.best);
+  document.getElementById('rank-note').textContent = mode === 'net' ? 'ネット順位: 各ラウンドの グロス - HDCP で表示' : 'グロス順位: 入力スコアをそのまま表示';
   if (!stats.length) {
-    document.getElementById('rank-body').innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:24px;">スコアがまだありません</td></tr>`;
+    const cols = showAvgHdcp ? 7 : 6;
+    document.getElementById('rank-body').innerHTML = `<tr><td colspan="${cols}" style="text-align:center;color:var(--text-muted);padding:24px;">スコアがまだありません</td></tr>`;
     return;
   }
   document.getElementById('rank-body').innerHTML = stats.map((m,i) => {
     const rankCls = ['rank-1','rank-2','rank-3'][i] || 'rank-other';
     const rankStr = i < 3 ? ['🥇','🥈','🥉'][i] : `${i+1}位`;
+    const avgHdcpCell = showAvgHdcp
+      ? `<td style="font-family:'DM Mono',monospace;color:#6D28D9;">${m.avgHdcp !== null ? m.avgHdcp : '—'}</td>`
+      : '';
     return `<tr>
       <td class="${rankCls}">${rankStr}</td>
       <td style="font-weight:500;">${m.name}</td>
       <td style="color:var(--text-sub);">${m.rounds}回</td>
       <td style="font-family:'DM Mono',monospace;">${m.avg}</td>
+      ${avgHdcpCell}
       <td style="color:var(--green);font-weight:700;font-family:'DM Mono',monospace;">${m.best}</td>
       <td style="color:var(--red);font-family:'DM Mono',monospace;">${m.worst}</td>
     </tr>`;
