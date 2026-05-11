@@ -228,6 +228,10 @@ input:focus, select:focus { border-color: var(--green); box-shadow: 0 0 0 3px rg
         <div class="form-field"><label>スタート</label><input type="text" id="new-start" placeholder="例: 8:00 OUT" style="width:130px;"></div>
         <div class="form-field"><label>人数</label><input type="number" id="new-players" placeholder="8" style="width:70px;" min="1" max="30"></div>
         <div class="form-field" style="min-width:240px;"><label>メモ</label><input type="text" id="new-memo" placeholder="持ち物、注意事項など" style="width:240px;"></div>
+        <div class="form-field" style="min-width:300px;flex:1;">
+          <label>参加メンバー（既存）</label>
+          <div class="participant-list" id="new-participants-list"></div>
+        </div>
         <div class="form-field"><label>&nbsp;</label><button class="btn btn-primary" onclick="addRound()">追加</button></div>
       </div>
     </div>
@@ -515,8 +519,28 @@ function getRoundParticipants(r) {
 
 
 
+window.renderRoundParticipantPicker = function() {
+  const box = document.getElementById('new-participants-list');
+  if (!box) return;
+  if (!members.length) {
+    box.innerHTML = '<div class="muted">メンバーがまだいません</div>';
+    return;
+  }
+  // チェック状態を復元する
+  const prevChecked = new Set(
+    [...(box.querySelectorAll('input:checked') || [])].map(el => el.value)
+  );
+  box.innerHTML = members.map(m => `
+    <label class="participant-item">
+      <input type="checkbox" value="${m.id}"${prevChecked.has(m.id) ? ' checked' : ''}>
+      <span>${escapeHtml(m.name)}</span>
+    </label>
+  `).join('');
+}
+
 // ---- Schedule ----
 window.renderSchedule = function() {
+  renderRoundParticipantPicker();
   const view = getRoundsSortedByDate();
   document.getElementById('sched-body').innerHTML = view.length === 0
     ? `<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:24px;">ラウンドがまだありません</td></tr>`
@@ -606,9 +630,13 @@ window.addRound = async function() {
   const memo = document.getElementById('new-memo').value.trim();
   const rawPlayers = document.getElementById('new-players').value;
   const players = rawPlayers !== '' ? parseInt(rawPlayers) : null;
+  const pickedIds = [...document.querySelectorAll('#new-participants-list input[type=checkbox]:checked')].map(el => el.value);
+  const participants = pickedIds
+    .map(id => members.find(m => m.id === id)?.name)
+    .filter(Boolean);
   if (!date || !course) { toast('日付とコース名は必須です'); return; }
   if (players !== null && (isNaN(players) || players < 1 || players > 30)) { toast('人数は1〜30で入力してください'); return; }
-  
+
   const id = 'round_' + Date.now();
   await setDoc(doc(db, 'rounds', id), {
     date,
@@ -616,7 +644,8 @@ window.addRound = async function() {
     fee: fee||'未定',
     startTime,
     memo,
-    players: players,
+    players: participants.length || players,
+    participants,
     done: false,
     order: rounds.length
   });
@@ -626,6 +655,7 @@ window.addRound = async function() {
   document.getElementById('new-start').value = '';
   document.getElementById('new-memo').value = '';
   document.getElementById('new-players').value = '';
+  document.querySelectorAll('#new-participants-list input[type=checkbox]').forEach(el => { el.checked = false; });
   toast('ラウンドを追加しました');
 }
 
