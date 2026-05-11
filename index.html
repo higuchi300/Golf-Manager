@@ -345,7 +345,6 @@ input:focus, select:focus { border-color: var(--green); box-shadow: 0 0 0 3px rg
       <div class="card-title">メンバーを追加</div>
       <div class="form-row">
         <div class="form-field"><label>氏名</label><input type="text" id="new-member" placeholder="例: 弘前 太郎" style="width:180px;"></div>
-        <div class="form-field"><label>ハンデ</label><input type="number" id="new-handicap" placeholder="0" style="width:90px;" min="0" max="54"></div>
         <div class="form-field"><label>&nbsp;</label><button class="btn btn-primary" onclick="addMember()">追加</button></div>
       </div>
     </div>
@@ -1327,14 +1326,11 @@ window.showMemberHistory = function(memberId, rerenderMembers = true) {
 
 window.addMember = async function() {
   const name = document.getElementById('new-member').value.trim();
-  const rawHandicap = document.getElementById('new-handicap').value;
-  const handicap = rawHandicap !== '' ? parseInt(rawHandicap) : 0;
   if (!name) return;
-  if (isNaN(handicap) || handicap < 0 || handicap > 54) { toast('ハンデは0〜54で入力してください'); return; }
+  const handicap = 0;
   const id = 'member_' + Date.now();
   await setDoc(doc(db, 'members', id), { name, handicap, order: members.length });
   document.getElementById('new-member').value = '';
-  document.getElementById('new-handicap').value = '';
   toast(`${name} を追加しました`);
 }
 
